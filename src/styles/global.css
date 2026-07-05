@@ -1,0 +1,104 @@
+@import './tokens.css';
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input, select, textarea { font-family: inherit; color: inherit; }
+
+a { color: var(--accent); }
+
+table { border-collapse: collapse; width: 100%; }
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font: 600 13px/1.2 var(--font-ui);
+  color: var(--text-secondary);
+}
+
+.field input,
+.field select,
+.field textarea {
+  height: 40px;
+  padding: 0 12px;
+  background: var(--bg-surface-3);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  font: 400 14px/1.2 var(--font-ui);
+  color: var(--text-strong);
+  outline: none;
+}
+
+.field textarea {
+  height: auto;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--accent);
+}
+
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--edge-highlight);
+  padding: 20px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font: 700 14px/1 var(--font-ui);
+  cursor: pointer;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: var(--glow-accent-sm);
+  transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.btn.secondary {
+  background: var(--bg-surface-2);
+  color: var(--text-strong);
+  border-color: var(--border-strong);
+  box-shadow: none;
+}
+.btn.danger {
+  background: var(--danger);
+  color: #fff;
+  box-shadow: none;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: var(--radius-full);
+  font: 700 11px/1 var(--font-ui);
+  letter-spacing: 0.02em;
+}

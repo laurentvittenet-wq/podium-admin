@@ -1,0 +1,54 @@
+/* Same values as the Podium design system tokens (podium/src/styles/tokens),
+   kept in one file here since the admin dashboard only needs a subset. */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --bg-base: #0B0E14;
+  --bg-surface: #12161F;
+  --bg-surface-2: #1A1F2B;
+  --bg-surface-3: #232A38;
+  --bg-overlay: rgba(6, 9, 14, 0.72);
+
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  --text-strong: #FFFFFF;
+  --text-primary: #E9EDF3;
+  --text-secondary: #9BA5B4;
+  --text-tertiary: #626C7C;
+
+  --accent: #00E676;
+  --accent-hover: #24F08C;
+  --accent-soft: rgba(0, 230, 118, 0.14);
+  --accent-line: rgba(0, 230, 118, 0.32);
+  --on-accent: #05230F;
+
+  --success: #00E676;
+  --success-soft: rgba(0, 230, 118, 0.14);
+  --danger: #FF4D5E;
+  --danger-soft: rgba(255, 77, 94, 0.14);
+  --warning: #FFB020;
+  --warning-soft: rgba(255, 176, 32, 0.15);
+  --info: #3D9DFF;
+  --info-soft: rgba(61, 157, 255, 0.14);
+
+  --gold: #F6C049;
+  --gold-2: #E39B1E;
+
+  --font-display: 'Sora', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-ui: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Space Mono', 'SFMono-Regular', ui-monospace, monospace;
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md: 0 6px 20px rgba(0,0,0,0.45);
+  --edge-highlight: inset 0 1px 0 rgba(255,255,255,0.05);
+  --glow-accent-sm: 0 4px 16px rgba(0, 230, 118, 0.32);
+
+  --dur-fast: 140ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
