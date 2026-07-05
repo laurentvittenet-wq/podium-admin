@@ -5,10 +5,12 @@ import { Login } from './pages/Login';
 import { ContestsPage } from './pages/ContestsPage';
 import { ScoringRulesPage } from './pages/ScoringRulesPage';
 import { MatchesPage } from './pages/MatchesPage';
+import { PlayersPage } from './pages/PlayersPage';
 
 const NAV = [
   { value: 'contests', label: 'Concours' },
   { value: 'matches', label: 'Matchs' },
+  { value: 'players', label: 'Joueurs' },
   { value: 'rules', label: 'Règles de points' },
 ] as const;
 
@@ -77,6 +79,7 @@ export function App() {
       <main style={{ flex: 1, padding: 32, maxWidth: 900 }}>
         {page === 'contests' && <ContestsPage />}
         {page === 'matches' && <MatchesPage />}
+        {page === 'players' && <PlayersPage />}
         {page === 'rules' && <ScoringRulesPage />}
       </main>
     </div>

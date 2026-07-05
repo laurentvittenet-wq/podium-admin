@@ -286,6 +286,21 @@ export type Database = {
         Args: { p_away_score: number; p_home_score: number; p_match_id: string };
         Returns: undefined;
       };
+      get_players_admin: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          id: string;
+          email: string | null;
+          pseudo: string;
+          display_name: string | null;
+          role: Database['public']['Enums']['user_role'];
+          created_at: string;
+        }[];
+      };
+      delete_player_admin: {
+        Args: { p_user_id: string };
+        Returns: undefined;
+      };
     };
     Enums: {
       match_status: 'open' | 'locked' | 'live' | 'settled';
