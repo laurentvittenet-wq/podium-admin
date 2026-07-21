@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Check, Link2, Search, Trash2, Upload, X } from 'lucide-react';
+import { Check, Link2, Plus, Search, Trash2, Upload, X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { Database } from '../lib/database.types';
 
@@ -83,10 +83,13 @@ export function LogosPage() {
   const [error, setError] = useState<string | null>(null);
   const [busyTeamId, setBusyTeamId] = useState<string | null>(null);
 
-  const [sport, setSport] = useState<Sport>('football');
   const [league, setLeague] = useState('');
   const [searching, setSearching] = useState(false);
-  const [searchSummary, setSearchSummary] = useState<{ count: number; missing: number } | null>(null);
+  const [searchSummary, setSearchSummary] = useState<{ count: number; missing: number; league?: string; season?: number } | null>(null);
+
+  const [addSport, setAddSport] = useState<Sport>('football');
+  const [addName, setAddName] = useState('');
+  const [adding, setAdding] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -104,15 +107,27 @@ export function LogosPage() {
     setSearching(true);
     setError(null);
     setSearchSummary(null);
-    const { data, error } = await supabase.functions.invoke<{ count: number; teams: { name: string; logoUrl: string | null; fetched: boolean }[] }>('team-logos', {
-      body: { action: 'search', sport, league: league.trim() },
+    const { data, error } = await supabase.functions.invoke<{ count: number; teams: { name: string; logoUrl: string | null; fetched: boolean }[]; league?: string; season?: number }>('team-logos', {
+      body: { action: 'search', sport: 'football', league: league.trim() },
     });
     setSearching(false);
     if (error) { setError(error.message); return; }
     if (data) {
       const missing = data.teams.filter((t) => !t.fetched).length;
-      setSearchSummary({ count: data.count, missing });
+      setSearchSummary({ count: data.count, missing, league: data.league, season: data.season });
     }
+    load();
+  }
+
+  async function handleAddTeam(e: FormEvent) {
+    e.preventDefault();
+    if (!addName.trim()) return;
+    setAdding(true);
+    setError(null);
+    const { error } = await supabase.from('teams').insert({ sport: addSport, name: addName.trim(), source: 'manual' });
+    setAdding(false);
+    if (error) { setError(error.message); return; }
+    setAddName('');
     load();
   }
 
@@ -157,31 +172,24 @@ export function LogosPage() {
       <div>
         <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text-strong)' }}>Logos des équipes</h1>
         <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>
-          Récupère automatiquement les logos d'une compétition depuis TheSportsDB, pour les afficher dans les encarts de rencontres à la place des abréviations.
+          Récupère automatiquement les logos d'une compétition de football depuis API-Football, pour les afficher dans les encarts de rencontres à la place des abréviations. Pour les autres sports, ajoute les équipes et leurs logos manuellement ci-dessous.
         </p>
       </div>
 
       <form onSubmit={handleSearch} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <h2 style={{ margin: 0, fontSize: 16, color: 'var(--text-strong)' }}>Récupérer les logos d'une compétition</h2>
-        <div className="form-row">
-          <div className="field" style={{ flex: '1 1 160px' }}>
-            <label htmlFor="l-sport">Sport</label>
-            <select id="l-sport" value={sport} onChange={(e) => setSport(e.target.value as Sport)}>
-              {SPORTS.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div className="field" style={{ flex: '2 1 240px' }}>
-            <label htmlFor="l-league">Compétition (nom reconnu par TheSportsDB)</label>
-            <input id="l-league" value={league} onChange={(e) => setLeague(e.target.value)} placeholder="French Ligue 1" required />
-          </div>
+        <h2 style={{ margin: 0, fontSize: 16, color: 'var(--text-strong)' }}>Récupérer les logos d'une compétition (football)</h2>
+        <div className="field">
+          <label htmlFor="l-league">Compétition (nom reconnu par API-Football)</label>
+          <input id="l-league" value={league} onChange={(e) => setLeague(e.target.value)} placeholder="Ligue 1" required />
         </div>
         <p style={{ margin: 0, fontSize: 12, color: 'var(--text-tertiary)' }}>
-          Exemples : "French Ligue 1", "French Ligue 2", "English Premier League". Le nom doit correspondre exactement à celui utilisé par TheSportsDB.
+          Exemples : "Ligue 1", "Ligue 2", "Premier League", "Champions League". La saison en cours est sélectionnée automatiquement.
         </p>
 
         {error && <div style={{ color: 'var(--danger)', fontSize: 13 }}>{error}</div>}
         {searchSummary && (
           <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+            {searchSummary.league ? `${searchSummary.league} (saison ${searchSummary.season}) — ` : ''}
             {searchSummary.count} équipe{searchSummary.count > 1 ? 's' : ''} trouvée{searchSummary.count > 1 ? 's' : ''}
             {searchSummary.missing > 0 ? ` — ${searchSummary.missing} sans logo disponible (remplace-les manuellement ci-dessous).` : '.'}
           </div>
@@ -192,6 +200,29 @@ export function LogosPage() {
           aria-label={searching ? 'Recherche…' : 'Rechercher et récupérer les logos'}
           style={{ alignSelf: 'flex-start' }}>
           <Search size={18} />
+        </button>
+      </form>
+
+      <form onSubmit={handleAddTeam} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <h2 style={{ margin: 0, fontSize: 16, color: 'var(--text-strong)' }}>Ajouter une équipe manuellement</h2>
+        <p style={{ margin: 0, fontSize: 12, color: 'var(--text-tertiary)' }}>
+          Utile pour le rugby, le tennis, les JO, ou toute équipe absente d'API-Football. Ajoute d'abord l'équipe, puis attache-lui un logo (upload ou URL) depuis la liste ci-dessous.
+        </p>
+        <div className="form-row">
+          <div className="field" style={{ flex: '1 1 160px' }}>
+            <label htmlFor="a-sport">Sport</label>
+            <select id="a-sport" value={addSport} onChange={(e) => setAddSport(e.target.value as Sport)}>
+              {SPORTS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="field" style={{ flex: '2 1 240px' }}>
+            <label htmlFor="a-name">Nom de l'équipe</label>
+            <input id="a-name" value={addName} onChange={(e) => setAddName(e.target.value)} placeholder="Stade Toulousain" required />
+          </div>
+        </div>
+        <button type="submit" className="btn icon-only" disabled={adding || !addName.trim()}
+          title="Ajouter l'équipe" aria-label="Ajouter l'équipe" style={{ alignSelf: 'flex-start' }}>
+          <Plus size={18} />
         </button>
       </form>
 
