@@ -2,11 +2,9 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Check, Link2, Plus, Search, Trash2, Upload, X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { Database } from '../lib/database.types';
+import { fetchSports, type SportRow } from '../lib/sports';
 
 type Team = Database['public']['Tables']['teams']['Row'];
-type Sport = Database['public']['Enums']['sport_type'];
-
-const SPORTS: Sport[] = ['football', 'rugby', 'tennis', 'olympics'];
 
 function slugify(text: string): string {
   return text
@@ -92,6 +90,7 @@ function TeamRow({ team, onDeleteLogo, onReplaceUrl, onUploadFile, busy }: {
 
 export function LogosPage() {
   const [teams, setTeams] = useState<Team[]>([]);
+  const [sports, setSports] = useState<SportRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyTeamId, setBusyTeamId] = useState<string | null>(null);
@@ -100,15 +99,20 @@ export function LogosPage() {
   const [searching, setSearching] = useState(false);
   const [searchSummary, setSearchSummary] = useState<{ count: number; missing: number; league?: string; season?: number } | null>(null);
 
-  const [addSport, setAddSport] = useState<Sport>('football');
+  const [addSport, setAddSport] = useState('');
   const [addName, setAddName] = useState('');
   const [adding, setAdding] = useState(false);
 
   async function load() {
     setLoading(true);
-    const { data, error } = await supabase.from('teams').select('*').order('sport').order('name');
+    const [{ data, error }, activeSports] = await Promise.all([
+      supabase.from('teams').select('*').order('sport').order('name'),
+      fetchSports(true),
+    ]);
     if (error) { setError(error.message); setLoading(false); return; }
     setTeams(data || []);
+    setSports(activeSports);
+    if (activeSports.length && !addSport) setAddSport(activeSports[0].slug);
     setLoading(false);
   }
 
@@ -178,7 +182,9 @@ export function LogosPage() {
     load();
   }
 
-  const bySport = SPORTS.map((s) => ({ sport: s, teams: teams.filter((t) => t.sport === s) })).filter((g) => g.teams.length > 0);
+  const bySport = sports
+    .map((s) => ({ sport: s.slug, label: s.name, teams: teams.filter((t) => t.sport === s.slug) }))
+    .filter((g) => g.teams.length > 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -224,8 +230,8 @@ export function LogosPage() {
         <div className="form-row">
           <div className="field" style={{ flex: '1 1 160px' }}>
             <label htmlFor="a-sport">Sport</label>
-            <select id="a-sport" value={addSport} onChange={(e) => setAddSport(e.target.value as Sport)}>
-              {SPORTS.map((s) => <option key={s} value={s}>{s}</option>)}
+            <select id="a-sport" value={addSport} onChange={(e) => setAddSport(e.target.value)}>
+              {sports.map((s) => <option key={s.slug} value={s.slug}>{s.name}</option>)}
             </select>
           </div>
           <div className="field" style={{ flex: '2 1 240px' }}>
@@ -248,7 +254,7 @@ export function LogosPage() {
         ) : (
           bySport.map((g) => (
             <div key={g.sport} style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-tertiary)', padding: '6px 8px' }}>{g.sport}</div>
+              <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-tertiary)', padding: '6px 8px' }}>{g.label}</div>
               {g.teams.map((t) => (
                 <TeamRow key={t.id} team={t} busy={busyTeamId === t.id}
                   onDeleteLogo={handleDeleteLogo} onReplaceUrl={handleReplaceUrl} onUploadFile={handleUploadFile} />

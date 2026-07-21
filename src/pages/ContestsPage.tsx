@@ -2,12 +2,10 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Check, Flag, Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { Database } from '../lib/database.types';
+import { fetchSports, type SportRow } from '../lib/sports';
 
 type Contest = Database['public']['Tables']['contests']['Row'];
 type ScoringRule = Database['public']['Tables']['scoring_rules']['Row'];
-type Sport = Database['public']['Enums']['sport_type'];
-
-const SPORTS: Sport[] = ['football', 'rugby', 'tennis', 'olympics'];
 
 function toDatetimeLocal(iso: string | null): string {
   if (!iso) return '';
@@ -16,8 +14,8 @@ function toDatetimeLocal(iso: string | null): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function ContestTable({ contests, rules, onEdit, onToggleFinished, onDelete }: {
-  contests: Contest[]; rules: ScoringRule[];
+function ContestTable({ contests, rules, sports, onEdit, onToggleFinished, onDelete }: {
+  contests: Contest[]; rules: ScoringRule[]; sports: SportRow[];
   onEdit: (c: Contest) => void; onToggleFinished: (c: Contest) => void; onDelete: (c: Contest) => void;
 }) {
   return (
@@ -36,7 +34,7 @@ function ContestTable({ contests, rules, onEdit, onToggleFinished, onDelete }: {
           {contests.map((c) => (
             <tr key={c.id} style={{ borderTop: '1px solid var(--border)' }}>
               <td style={{ padding: '10px 8px', color: 'var(--text-strong)', fontWeight: 700 }}>{c.name}</td>
-              <td style={{ padding: '10px 8px' }}>{c.sport || 'Tous'}</td>
+              <td style={{ padding: '10px 8px' }}>{(c.sport && sports.find((s) => s.slug === c.sport)?.name) || 'Tous'}</td>
               <td style={{ padding: '10px 8px' }}>{rules.find((r) => r.id === c.scoring_rule_id)?.name || 'Défaut'}</td>
               <td style={{ padding: '10px 8px', fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                 {c.starts_at ? new Date(c.starts_at).toLocaleString('fr-FR') : '—'} → {c.ends_at ? new Date(c.ends_at).toLocaleString('fr-FR') : '—'}
@@ -84,13 +82,14 @@ function ContestTable({ contests, rules, onEdit, onToggleFinished, onDelete }: {
 export function ContestsPage() {
   const [contests, setContests] = useState<Contest[]>([]);
   const [rules, setRules] = useState<ScoringRule[]>([]);
+  const [sports, setSports] = useState<SportRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [sport, setSport] = useState<Sport | ''>('');
+  const [sport, setSport] = useState('');
   const [scoringRuleId, setScoringRuleId] = useState('');
   const [startsAt, setStartsAt] = useState('');
   const [endsAt, setEndsAt] = useState('');
@@ -101,13 +100,15 @@ export function ContestsPage() {
 
   async function load() {
     setLoading(true);
-    const [{ data: c, error: e1 }, { data: r, error: e2 }] = await Promise.all([
+    const [{ data: c, error: e1 }, { data: r, error: e2 }, activeSports] = await Promise.all([
       supabase.from('contests').select('*').order('created_at', { ascending: false }),
       supabase.from('scoring_rules').select('*').order('created_at', { ascending: false }),
+      fetchSports(true),
     ]);
     if (e1 || e2) setError((e1 || e2)!.message);
     setContests(c || []);
     setRules(r || []);
+    setSports(activeSports);
     setLoading(false);
   }
 
@@ -122,7 +123,7 @@ export function ContestsPage() {
     setEditingId(c.id);
     setName(c.name);
     setDescription(c.description ?? '');
-    setSport((c.sport as Sport | null) ?? '');
+    setSport(c.sport ?? '');
     setScoringRuleId(c.scoring_rule_id ?? '');
     setStartsAt(toDatetimeLocal(c.starts_at));
     setEndsAt(toDatetimeLocal(c.ends_at));
@@ -195,9 +196,9 @@ export function ContestsPage() {
         <div className="form-row">
           <div className="field" style={{ flex: '1 1 160px' }}>
             <label htmlFor="c-sport">Sport</label>
-            <select id="c-sport" value={sport} onChange={(e) => setSport(e.target.value as Sport | '')}>
+            <select id="c-sport" value={sport} onChange={(e) => setSport(e.target.value)}>
               <option value="">Tous</option>
-              {SPORTS.map((s) => <option key={s} value={s}>{s}</option>)}
+              {sports.map((s) => <option key={s.slug} value={s.slug}>{s.name}</option>)}
             </select>
           </div>
           <div className="field" style={{ flex: '1 1 160px' }}>
@@ -254,14 +255,14 @@ export function ContestsPage() {
         ) : ongoing.length === 0 ? (
           <div style={{ color: 'var(--text-tertiary)' }}>Aucun concours en cours.</div>
         ) : (
-          <ContestTable contests={ongoing} rules={rules} onEdit={handleEdit} onToggleFinished={handleToggleFinished} onDelete={setConfirmDelete} />
+          <ContestTable contests={ongoing} rules={rules} sports={sports} onEdit={handleEdit} onToggleFinished={handleToggleFinished} onDelete={setConfirmDelete} />
         )}
       </div>
 
       {!loading && finished.length > 0 && (
         <div className="card">
           <h2 style={{ margin: '0 0 12px', fontSize: 16, color: 'var(--text-strong)' }}>Concours terminés</h2>
-          <ContestTable contests={finished} rules={rules} onEdit={handleEdit} onToggleFinished={handleToggleFinished} onDelete={setConfirmDelete} />
+          <ContestTable contests={finished} rules={rules} sports={sports} onEdit={handleEdit} onToggleFinished={handleToggleFinished} onDelete={setConfirmDelete} />
         </div>
       )}
 
