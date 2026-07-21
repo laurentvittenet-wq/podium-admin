@@ -260,6 +260,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      teams: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          external_id: string | null;
+          id: string;
+          logo_url: string | null;
+          name: string;
+          source: string;
+          sport: Database['public']['Enums']['sport_type'];
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          external_id?: string | null;
+          id?: string;
+          logo_url?: string | null;
+          name: string;
+          source?: string;
+          sport: Database['public']['Enums']['sport_type'];
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          external_id?: string | null;
+          id?: string;
+          logo_url?: string | null;
+          name?: string;
+          source?: string;
+          sport?: Database['public']['Enums']['sport_type'];
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       leaderboard: {
