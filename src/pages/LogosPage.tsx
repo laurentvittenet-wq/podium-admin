@@ -14,6 +14,19 @@ function slugify(text: string): string {
     .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
+/** supabase-js only exposes a generic "non-2xx status code" message for edge function errors; the actual reason lives in the response body. */
+async function describeFunctionError(error: unknown): Promise<string> {
+  const context = (error as { context?: Response })?.context;
+  if (context && typeof context.json === 'function') {
+    try {
+      const body = await context.clone().json();
+      if (body?.message) return body.message as string;
+      if (body?.error) return body.error as string;
+    } catch { /* not JSON, fall through */ }
+  }
+  return (error as { message?: string })?.message ?? 'Erreur inconnue.';
+}
+
 function TeamLogoThumb({ team }: { team: Team }) {
   return team.logo_url ? (
     <img src={team.logo_url} alt={team.name} style={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 'var(--radius-sm)', background: 'var(--bg-surface-2)' }} />
@@ -111,7 +124,7 @@ export function LogosPage() {
       body: { action: 'search', sport: 'football', league: league.trim() },
     });
     setSearching(false);
-    if (error) { setError(error.message); return; }
+    if (error) { setError(await describeFunctionError(error)); return; }
     if (data) {
       const missing = data.teams.filter((t) => !t.fetched).length;
       setSearchSummary({ count: data.count, missing, league: data.league, season: data.season });
@@ -147,7 +160,7 @@ export function LogosPage() {
       body: { action: 'import-url', teamId: team.id, imageUrl: url },
     });
     setBusyTeamId(null);
-    if (error) { setError(error.message); return; }
+    if (error) { setError(await describeFunctionError(error)); return; }
     load();
   }
 
