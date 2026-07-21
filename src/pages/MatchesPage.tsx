@@ -126,6 +126,13 @@ function isFutureMatch(match: Match) {
   return new Date(match.kickoff_at).getTime() > Date.now();
 }
 
+function formatKickoff(iso: string) {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${yy} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function EditMatchModal({ match, contests, rules, onDone, onCancel }: {
   match: Match; contests: Contest[]; rules: ScoringRule[]; onDone: () => void; onCancel: () => void;
 }) {
@@ -306,7 +313,7 @@ function ScoreCell({ match, home, away, onDone }: { match: Match; home: Team; aw
   if (match.status === 'settled' && !editing) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-strong)' }}>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-strong)' }}>
           {match.requires_score ? `${score?.home}:${score?.away}` : match.result ? resultLabel(match.result, home, away) : '—'}
         </span>
         <button
@@ -549,41 +556,26 @@ export function MatchesPage() {
         ) : matches.length === 0 ? (
           <div style={{ color: 'var(--text-tertiary)' }}>Aucun match pour l'instant.</div>
         ) : (
-          <div className="table-scroll">
-          <table>
-            <thead>
-              <tr style={{ textAlign: 'left', color: 'var(--text-tertiary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                <th style={{ padding: '6px 8px' }}>Match</th>
-                <th style={{ padding: '6px 8px' }}>Coup d'envoi</th>
-                <th style={{ padding: '6px 8px' }}>Statut</th>
-                <th style={{ padding: '6px 8px' }}>Résultat / Régler</th>
-                <th style={{ padding: '6px 8px' }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {matches.map((m) => {
-                const home = m.home_team as unknown as Team;
-                const away = m.away_team as unknown as Team;
-                return (
-                  <tr key={m.id} style={{ borderTop: '1px solid var(--border)' }}>
-                    <td style={{ padding: '10px 8px', whiteSpace: 'nowrap' }}>
-                      <div style={{ color: 'var(--text-strong)', fontWeight: 700 }}>{home.name} — {away.name}</div>
-                      <div style={{ marginTop: 3, display: 'flex', gap: 4 }}>
-                        {!m.allows_draw && <span className="badge" style={{ background: 'var(--bg-surface-3)', color: 'var(--text-tertiary)' }}>Sans nul</span>}
-                        {!m.requires_score && <span className="badge" style={{ background: 'var(--bg-surface-3)', color: 'var(--text-tertiary)' }}>Sans score</span>}
-                      </div>
-                    </td>
-                    <td style={{ padding: '10px 8px', fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{new Date(m.kickoff_at).toLocaleString('fr-FR')}</td>
-                    <td style={{ padding: '10px 8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {matches.map((m) => {
+              const home = m.home_team as unknown as Team;
+              const away = m.away_team as unknown as Team;
+              return (
+                <div key={m.id} style={{ padding: '10px 0', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, flexWrap: 'wrap', rowGap: 3 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-strong)' }}>
+                        {home.name} — {away.name}
+                      </span>
                       <span className="badge" style={{
+                        fontSize: 10, height: 18, padding: '0 7px',
                         background: m.status === 'settled' ? 'var(--success-soft)' : m.status === 'locked' ? 'var(--bg-surface-3)' : 'var(--accent-soft)',
                         color: m.status === 'settled' ? 'var(--success)' : m.status === 'locked' ? 'var(--text-secondary)' : 'var(--accent)',
                       }}>{m.status}</span>
-                    </td>
-                    <td style={{ padding: '10px 8px' }}>
-                      <ScoreCell match={m} home={home} away={away} onDone={load} />
-                    </td>
-                    <td style={{ padding: '10px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {!m.allows_draw && <span className="badge" style={{ fontSize: 10, height: 18, padding: '0 7px', background: 'var(--bg-surface-3)', color: 'var(--text-tertiary)' }}>Sans nul</span>}
+                      {!m.requires_score && <span className="badge" style={{ fontSize: 10, height: 18, padding: '0 7px', background: 'var(--bg-surface-3)', color: 'var(--text-tertiary)' }}>Sans score</span>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 4, flex: 'none' }}>
                       {isFutureMatch(m) && (
                         <button
                           type="button"
@@ -591,9 +583,8 @@ export function MatchesPage() {
                           onClick={() => setEditMatch(m)}
                           title="Modifier le match"
                           aria-label="Modifier le match"
-                          style={{ marginRight: 6 }}
                         >
-                          <Pencil size={15} />
+                          <Pencil size={14} />
                         </button>
                       )}
                       <button
@@ -604,14 +595,17 @@ export function MatchesPage() {
                         aria-label="Supprimer le match"
                         style={{ color: 'var(--danger)' }}
                       >
-                        <Trash2 size={15} />
+                        <Trash2 size={14} />
                       </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>{formatKickoff(m.kickoff_at)}</span>
+                    <ScoreCell match={m} home={home} away={away} onDone={load} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
