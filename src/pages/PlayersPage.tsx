@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Trash2, X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 
 type PlayerRow = {
@@ -95,11 +96,13 @@ export function PlayersPage() {
                 </td>
                 <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
                   <button
-                    className="btn secondary"
+                    className="btn secondary icon-only sm"
                     onClick={() => setConfirmTarget(p)}
-                    style={{ height: 30, padding: '0 12px', fontSize: 12, color: 'var(--danger)' }}
+                    title="Supprimer"
+                    aria-label="Supprimer"
+                    style={{ color: 'var(--danger)' }}
                   >
-                    Supprimer
+                    <Trash2 size={15} />
                   </button>
                 </td>
               </tr>
@@ -122,16 +125,24 @@ export function PlayersPage() {
               et toutes ses données associées (pronostics, historique, XP). Impossible à annuler.
             </p>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button className="btn secondary" disabled={deleting} onClick={() => setConfirmTarget(null)}>
-                Annuler
+              <button
+                className="btn secondary icon-only"
+                disabled={deleting}
+                onClick={() => setConfirmTarget(null)}
+                title="Annuler"
+                aria-label="Annuler"
+              >
+                <X size={18} />
               </button>
               <button
-                className="btn"
+                className="btn icon-only"
                 disabled={deleting}
                 onClick={handleDelete}
+                title={deleting ? 'Suppression…' : 'Confirmer la suppression'}
+                aria-label={deleting ? 'Suppression…' : 'Confirmer la suppression'}
                 style={{ background: 'var(--danger)', color: '#fff' }}
               >
-                {deleting ? 'Suppression…' : 'Confirmer la suppression'}
+                <Trash2 size={18} />
               </button>
             </div>
           </div>
