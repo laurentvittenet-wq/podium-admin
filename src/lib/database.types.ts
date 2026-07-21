@@ -12,6 +12,7 @@ export type Database = {
           created_by: string | null;
           description: string | null;
           ends_at: string | null;
+          finished: boolean;
           id: string;
           name: string;
           scoring_rule_id: string | null;
@@ -23,6 +24,7 @@ export type Database = {
           created_by?: string | null;
           description?: string | null;
           ends_at?: string | null;
+          finished?: boolean;
           id?: string;
           name: string;
           scoring_rule_id?: string | null;
@@ -34,6 +36,7 @@ export type Database = {
           created_by?: string | null;
           description?: string | null;
           ends_at?: string | null;
+          finished?: boolean;
           id?: string;
           name?: string;
           scoring_rule_id?: string | null;
@@ -317,6 +320,10 @@ export type Database = {
       };
       promote_player_admin: {
         Args: { p_user_id: string };
+        Returns: undefined;
+      };
+      delete_contest_admin: {
+        Args: { p_contest_id: string };
         Returns: undefined;
       };
     };

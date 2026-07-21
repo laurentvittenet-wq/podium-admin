@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Check, Pencil, Plus, X } from 'lucide-react';
+import { Check, Flag, Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { Database } from '../lib/database.types';
 
@@ -16,6 +16,71 @@ function toDatetimeLocal(iso: string | null): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function ContestTable({ contests, rules, onEdit, onToggleFinished, onDelete }: {
+  contests: Contest[]; rules: ScoringRule[];
+  onEdit: (c: Contest) => void; onToggleFinished: (c: Contest) => void; onDelete: (c: Contest) => void;
+}) {
+  return (
+    <div className="table-scroll">
+      <table>
+        <thead>
+          <tr style={{ textAlign: 'left', color: 'var(--text-tertiary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <th style={{ padding: '6px 8px' }}>Nom</th>
+            <th style={{ padding: '6px 8px' }}>Sport</th>
+            <th style={{ padding: '6px 8px' }}>Règle</th>
+            <th style={{ padding: '6px 8px' }}>Période</th>
+            <th style={{ padding: '6px 8px' }}></th>
+          </tr>
+        </thead>
+        <tbody>
+          {contests.map((c) => (
+            <tr key={c.id} style={{ borderTop: '1px solid var(--border)' }}>
+              <td style={{ padding: '10px 8px', color: 'var(--text-strong)', fontWeight: 700 }}>{c.name}</td>
+              <td style={{ padding: '10px 8px' }}>{c.sport || 'Tous'}</td>
+              <td style={{ padding: '10px 8px' }}>{rules.find((r) => r.id === c.scoring_rule_id)?.name || 'Défaut'}</td>
+              <td style={{ padding: '10px 8px', fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                {c.starts_at ? new Date(c.starts_at).toLocaleString('fr-FR') : '—'} → {c.ends_at ? new Date(c.ends_at).toLocaleString('fr-FR') : '—'}
+              </td>
+              <td style={{ padding: '10px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                <div style={{ display: 'inline-flex', gap: 6 }}>
+                  <button
+                    type="button"
+                    className="btn secondary icon-only sm"
+                    onClick={() => onEdit(c)}
+                    title="Modifier"
+                    aria-label="Modifier"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    className="btn secondary icon-only sm"
+                    onClick={() => onToggleFinished(c)}
+                    title={c.finished ? 'Réactiver le concours' : 'Marquer terminé'}
+                    aria-label={c.finished ? 'Réactiver le concours' : 'Marquer terminé'}
+                  >
+                    {c.finished ? <RotateCcw size={15} /> : <Flag size={15} />}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn secondary icon-only sm"
+                    onClick={() => onDelete(c)}
+                    title="Supprimer"
+                    aria-label="Supprimer"
+                    style={{ color: 'var(--danger)' }}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function ContestsPage() {
   const [contests, setContests] = useState<Contest[]>([]);
   const [rules, setRules] = useState<ScoringRule[]>([]);
@@ -30,6 +95,9 @@ export function ContestsPage() {
   const [startsAt, setStartsAt] = useState('');
   const [endsAt, setEndsAt] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const [confirmDelete, setConfirmDelete] = useState<Contest | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -81,6 +149,27 @@ export function ContestsPage() {
     resetForm();
     load();
   }
+
+  async function handleToggleFinished(c: Contest) {
+    setError(null);
+    const { error } = await supabase.from('contests').update({ finished: !c.finished }).eq('id', c.id);
+    if (error) { setError(error.message); return; }
+    load();
+  }
+
+  async function handleDelete() {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    setError(null);
+    const { error } = await supabase.rpc('delete_contest_admin', { p_contest_id: confirmDelete.id });
+    setDeleting(false);
+    if (error) { setError(error.message); return; }
+    setConfirmDelete(null);
+    load();
+  }
+
+  const ongoing = contests.filter((c) => !c.finished);
+  const finished = contests.filter((c) => c.finished);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -159,50 +248,60 @@ export function ContestsPage() {
       </form>
 
       <div className="card">
-        <h2 style={{ margin: '0 0 12px', fontSize: 16, color: 'var(--text-strong)' }}>Concours existants</h2>
+        <h2 style={{ margin: '0 0 12px', fontSize: 16, color: 'var(--text-strong)' }}>Concours en cours</h2>
         {loading ? (
           <div style={{ color: 'var(--text-tertiary)' }}>Chargement…</div>
-        ) : contests.length === 0 ? (
-          <div style={{ color: 'var(--text-tertiary)' }}>Aucun concours pour l'instant.</div>
+        ) : ongoing.length === 0 ? (
+          <div style={{ color: 'var(--text-tertiary)' }}>Aucun concours en cours.</div>
         ) : (
-          <div className="table-scroll">
-          <table>
-            <thead>
-              <tr style={{ textAlign: 'left', color: 'var(--text-tertiary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                <th style={{ padding: '6px 8px' }}>Nom</th>
-                <th style={{ padding: '6px 8px' }}>Sport</th>
-                <th style={{ padding: '6px 8px' }}>Règle</th>
-                <th style={{ padding: '6px 8px' }}>Période</th>
-                <th style={{ padding: '6px 8px' }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {contests.map((c) => (
-                <tr key={c.id} style={{ borderTop: '1px solid var(--border)' }}>
-                  <td style={{ padding: '10px 8px', color: 'var(--text-strong)', fontWeight: 700 }}>{c.name}</td>
-                  <td style={{ padding: '10px 8px' }}>{c.sport || 'Tous'}</td>
-                  <td style={{ padding: '10px 8px' }}>{rules.find((r) => r.id === c.scoring_rule_id)?.name || 'Défaut'}</td>
-                  <td style={{ padding: '10px 8px', fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                    {c.starts_at ? new Date(c.starts_at).toLocaleString('fr-FR') : '—'} → {c.ends_at ? new Date(c.ends_at).toLocaleString('fr-FR') : '—'}
-                  </td>
-                  <td style={{ padding: '10px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    <button
-                      type="button"
-                      className="btn secondary icon-only sm"
-                      onClick={() => handleEdit(c)}
-                      title="Modifier"
-                      aria-label="Modifier"
-                    >
-                      <Pencil size={15} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
+          <ContestTable contests={ongoing} rules={rules} onEdit={handleEdit} onToggleFinished={handleToggleFinished} onDelete={setConfirmDelete} />
         )}
       </div>
+
+      {!loading && finished.length > 0 && (
+        <div className="card">
+          <h2 style={{ margin: '0 0 12px', fontSize: 16, color: 'var(--text-strong)' }}>Concours terminés</h2>
+          <ContestTable contests={finished} rules={rules} onEdit={handleEdit} onToggleFinished={handleToggleFinished} onDelete={setConfirmDelete} />
+        </div>
+      )}
+
+      {confirmDelete && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'var(--bg-overlay)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50,
+        }}>
+          <div className="card" style={{ maxWidth: 380, width: '90%' }}>
+            <h2 style={{ margin: '0 0 8px', fontSize: 16, color: 'var(--text-strong)' }}>
+              Supprimer {confirmDelete.name} ?
+            </h2>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--text-secondary)' }}>
+              Cette action supprime définitivement le concours ainsi que tous ses matchs et tous les pronostics des
+              joueurs qui s'y rattachent : leurs points, bonus et malus disparaissent avec. Impossible à annuler.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                className="btn secondary icon-only"
+                disabled={deleting}
+                onClick={() => setConfirmDelete(null)}
+                title="Annuler"
+                aria-label="Annuler"
+              >
+                <X size={18} />
+              </button>
+              <button
+                className="btn icon-only"
+                disabled={deleting}
+                onClick={handleDelete}
+                title={deleting ? 'Suppression…' : 'Confirmer la suppression'}
+                aria-label={deleting ? 'Suppression…' : 'Confirmer la suppression'}
+                style={{ background: 'var(--danger)', color: '#fff' }}
+              >
+                <Trash2 size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
