@@ -19,6 +19,7 @@ type NavValue = (typeof NAV)[number]['value'];
 export function App() {
   const auth = useAuth();
   const [page, setPage] = useState<NavValue>('contests');
+  const [navOpen, setNavOpen] = useState(false);
 
   if (auth.status === 'loading') {
     return <div style={{ padding: 24, color: 'var(--text-secondary)' }}>Chargement…</div>;
@@ -44,27 +45,41 @@ export function App() {
 
   const { profile } = auth;
 
+  const brand = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--accent)' }} />
+      <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17, letterSpacing: '-0.02em', color: 'var(--text-strong)' }}>
+        Podium
+      </span>
+    </div>
+  );
+
   return (
-    <div style={{ display: 'flex', minHeight: '100%' }}>
-      <aside style={{
-        width: 220, flex: 'none', borderRight: '1px solid var(--border)',
-        display: 'flex', flexDirection: 'column', padding: 16, gap: 4,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px 20px' }}>
-          <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--accent)' }} />
-          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17, letterSpacing: '-0.02em', color: 'var(--text-strong)' }}>
-            Podium
-          </span>
+    <div className="app-shell">
+      <header className="app-topbar">
+        <button className="nav-toggle" aria-label="Ouvrir le menu" onClick={() => setNavOpen(true)}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        {brand}
+      </header>
+
+      <div className={`app-sidebar-backdrop${navOpen ? ' open' : ''}`} onClick={() => setNavOpen(false)} />
+
+      <aside className={`app-sidebar${navOpen ? ' open' : ''}`}>
+        <div style={{ padding: '4px 8px 20px' }}>
+          {brand}
         </div>
         {NAV.map((n) => (
           <button
             key={n.value}
-            onClick={() => setPage(n.value)}
-            style={{
-              textAlign: 'left', padding: '10px 12px', borderRadius: 'var(--radius-md)', border: 'none',
-              cursor: 'pointer', font: '700 14px var(--font-ui)',
-              background: page === n.value ? 'var(--accent-soft)' : 'transparent',
-              color: page === n.value ? 'var(--accent)' : 'var(--text-secondary)',
+            className={`nav-link${page === n.value ? ' active' : ''}`}
+            onClick={() => {
+              setPage(n.value);
+              setNavOpen(false);
             }}
           >
             {n.label}
@@ -76,7 +91,8 @@ export function App() {
         </div>
         <button className="btn secondary" onClick={() => supabase.auth.signOut()}>Se déconnecter</button>
       </aside>
-      <main style={{ flex: 1, padding: 32, maxWidth: 900 }}>
+
+      <main className="app-main">
         {page === 'contests' && <ContestsPage />}
         {page === 'matches' && <MatchesPage />}
         {page === 'players' && <PlayersPage />}
