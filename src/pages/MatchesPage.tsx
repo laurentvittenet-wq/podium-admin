@@ -9,9 +9,12 @@ type Team = { name: string; abbr?: string; color?: string; textColor?: string };
 
 const SPORTS: Sport[] = ['football', 'rugby', 'tennis', 'olympics'];
 
-function SettleForm({ match, onDone }: { match: Match; onDone: () => void }) {
-  const [home, setHome] = useState('0');
-  const [away, setAway] = useState('0');
+function SettleForm({ match, editingSettled, onDone, onCancel }: {
+  match: Match; editingSettled: boolean; onDone: () => void; onCancel?: () => void;
+}) {
+  const score = match.score as unknown as { home: number; away: number } | null;
+  const [home, setHome] = useState(score ? String(score.home) : '0');
+  const [away, setAway] = useState(score ? String(score.away) : '0');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,17 +32,54 @@ function SettleForm({ match, onDone }: { match: Match; onDone: () => void }) {
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-      <input type="number" min={0} value={home} onChange={(e) => setHome(e.target.value)}
-        style={{ width: 44, height: 30, textAlign: 'center', background: 'var(--bg-surface-3)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text-strong)' }} />
-      <span style={{ color: 'var(--text-tertiary)' }}>:</span>
-      <input type="number" min={0} value={away} onChange={(e) => setAway(e.target.value)}
-        style={{ width: 44, height: 30, textAlign: 'center', background: 'var(--bg-surface-3)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text-strong)' }} />
-      <button type="button" className="btn" disabled={busy} onClick={handleSettle} style={{ height: 30, padding: '0 12px', fontSize: 12, flex: 'none' }}>
-        Régler
-      </button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <input type="number" min={0} value={home} onChange={(e) => setHome(e.target.value)}
+          style={{ width: 44, height: 30, textAlign: 'center', background: 'var(--bg-surface-3)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text-strong)' }} />
+        <span style={{ color: 'var(--text-tertiary)' }}>:</span>
+        <input type="number" min={0} value={away} onChange={(e) => setAway(e.target.value)}
+          style={{ width: 44, height: 30, textAlign: 'center', background: 'var(--bg-surface-3)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text-strong)' }} />
+        <button type="button" className="btn" disabled={busy} onClick={handleSettle} style={{ height: 30, padding: '0 12px', fontSize: 12, flex: 'none' }}>
+          {editingSettled ? 'Enregistrer' : 'Régler'}
+        </button>
+        {onCancel && (
+          <button type="button" className="btn secondary" disabled={busy} onClick={onCancel} style={{ height: 30, padding: '0 12px', fontSize: 12, flex: 'none' }}>
+            Annuler
+          </button>
+        )}
+      </div>
+      {editingSettled && (
+        <span style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
+          Recalculera les points de tous les pronostics sur ce match.
+        </span>
+      )}
       {error && <span style={{ color: 'var(--danger)', fontSize: 12 }}>{error}</span>}
     </div>
+  );
+}
+
+function ScoreCell({ match, onDone }: { match: Match; onDone: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const score = match.score as unknown as { home: number; away: number } | null;
+
+  if (match.status === 'settled' && !editing) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-strong)' }}>{score?.home}:{score?.away}</span>
+        <button type="button" className="btn secondary" onClick={() => setEditing(true)} style={{ height: 30, padding: '0 10px', fontSize: 12 }}>
+          Modifier
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <SettleForm
+      match={match}
+      editingSettled={match.status === 'settled'}
+      onDone={() => { setEditing(false); onDone(); }}
+      onCancel={match.status === 'settled' ? () => setEditing(false) : undefined}
+    />
   );
 }
 
@@ -210,7 +250,6 @@ export function MatchesPage() {
               {matches.map((m) => {
                 const home = m.home_team as unknown as Team;
                 const away = m.away_team as unknown as Team;
-                const score = m.score as unknown as { home: number; away: number } | null;
                 return (
                   <tr key={m.id} style={{ borderTop: '1px solid var(--border)' }}>
                     <td style={{ padding: '10px 8px', color: 'var(--text-strong)', fontWeight: 700, whiteSpace: 'nowrap' }}>{home.name} — {away.name}</td>
@@ -222,9 +261,7 @@ export function MatchesPage() {
                       }}>{m.status}</span>
                     </td>
                     <td style={{ padding: '10px 8px' }}>
-                      {m.status === 'settled'
-                        ? <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-strong)' }}>{score?.home}:{score?.away}</span>
-                        : <SettleForm match={m} onDone={load} />}
+                      <ScoreCell match={m} onDone={load} />
                     </td>
                   </tr>
                 );
