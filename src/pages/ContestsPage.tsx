@@ -8,12 +8,20 @@ type Sport = Database['public']['Enums']['sport_type'];
 
 const SPORTS: Sport[] = ['football', 'rugby', 'tennis', 'olympics'];
 
+function toDatetimeLocal(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function ContestsPage() {
   const [contests, setContests] = useState<Contest[]>([]);
   const [rules, setRules] = useState<ScoringRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [sport, setSport] = useState<Sport | ''>('');
@@ -36,21 +44,40 @@ export function ContestsPage() {
 
   useEffect(() => { load(); }, []);
 
-  async function handleCreate(e: FormEvent) {
+  function resetForm() {
+    setEditingId(null);
+    setName(''); setDescription(''); setSport(''); setScoringRuleId(''); setStartsAt(''); setEndsAt('');
+  }
+
+  function handleEdit(c: Contest) {
+    setEditingId(c.id);
+    setName(c.name);
+    setDescription(c.description ?? '');
+    setSport((c.sport as Sport | null) ?? '');
+    setScoringRuleId(c.scoring_rule_id ?? '');
+    setStartsAt(toDatetimeLocal(c.starts_at));
+    setEndsAt(toDatetimeLocal(c.ends_at));
+    setError(null);
+  }
+
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError(null);
-    const { error } = await supabase.from('contests').insert({
+    const payload = {
       name,
       description: description || null,
       sport: sport || null,
       scoring_rule_id: scoringRuleId || null,
       starts_at: startsAt ? new Date(startsAt).toISOString() : null,
       ends_at: endsAt ? new Date(endsAt).toISOString() : null,
-    });
+    };
+    const { error } = editingId
+      ? await supabase.from('contests').update(payload).eq('id', editingId)
+      : await supabase.from('contests').insert(payload);
     setSaving(false);
     if (error) { setError(error.message); return; }
-    setName(''); setDescription(''); setSport(''); setScoringRuleId(''); setStartsAt(''); setEndsAt('');
+    resetForm();
     load();
   }
 
@@ -63,8 +90,10 @@ export function ContestsPage() {
         </p>
       </div>
 
-      <form onSubmit={handleCreate} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <h2 style={{ margin: 0, fontSize: 16, color: 'var(--text-strong)' }}>Nouveau concours</h2>
+      <form onSubmit={handleSubmit} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <h2 style={{ margin: 0, fontSize: 16, color: 'var(--text-strong)' }}>
+          {editingId ? 'Modifier le concours' : 'Nouveau concours'}
+        </h2>
         <div className="field">
           <label htmlFor="c-name">Nom</label>
           <input id="c-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Concours du jour" required />
@@ -101,9 +130,16 @@ export function ContestsPage() {
         </div>
 
         {error && <div style={{ color: 'var(--danger)', fontSize: 13 }}>{error}</div>}
-        <button type="submit" className="btn" disabled={saving} style={{ alignSelf: 'flex-start' }}>
-          Créer le concours
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="submit" className="btn" disabled={saving} style={{ alignSelf: 'flex-start' }}>
+            {editingId ? 'Enregistrer les modifications' : 'Créer le concours'}
+          </button>
+          {editingId && (
+            <button type="button" className="btn secondary" disabled={saving} onClick={resetForm} style={{ alignSelf: 'flex-start' }}>
+              Annuler
+            </button>
+          )}
+        </div>
       </form>
 
       <div className="card">
@@ -121,6 +157,7 @@ export function ContestsPage() {
                 <th style={{ padding: '6px 8px' }}>Sport</th>
                 <th style={{ padding: '6px 8px' }}>Règle</th>
                 <th style={{ padding: '6px 8px' }}>Période</th>
+                <th style={{ padding: '6px 8px' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -131,6 +168,16 @@ export function ContestsPage() {
                   <td style={{ padding: '10px 8px' }}>{rules.find((r) => r.id === c.scoring_rule_id)?.name || 'Défaut'}</td>
                   <td style={{ padding: '10px 8px', fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                     {c.starts_at ? new Date(c.starts_at).toLocaleString('fr-FR') : '—'} → {c.ends_at ? new Date(c.ends_at).toLocaleString('fr-FR') : '—'}
+                  </td>
+                  <td style={{ padding: '10px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <button
+                      type="button"
+                      className="btn secondary"
+                      onClick={() => handleEdit(c)}
+                      style={{ height: 30, padding: '0 12px', fontSize: 12 }}
+                    >
+                      Modifier
+                    </button>
                   </td>
                 </tr>
               ))}
