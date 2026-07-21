@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Check, ChevronLeft, ChevronRight, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { Database } from '../lib/database.types';
 import { fetchSports, type SportRow } from '../lib/sports';
@@ -299,7 +299,9 @@ function EditMatchModal({ match, contests, rules, sports, onDone, onCancel }: {
   );
 }
 
-function ScoreCell({ match, home, away, onDone }: { match: Match; home: Team; away: Team; onDone: () => void }) {
+function ScoreCell({ match, home, away, onDone, onRequestReset }: {
+  match: Match; home: Team; away: Team; onDone: () => void; onRequestReset: () => void;
+}) {
   const [editing, setEditing] = useState(false);
   const score = match.score as unknown as { home: number; away: number } | null;
 
@@ -317,6 +319,16 @@ function ScoreCell({ match, home, away, onDone }: { match: Match; home: Team; aw
           aria-label="Modifier"
         >
           <Pencil size={15} />
+        </button>
+        <button
+          type="button"
+          className="btn secondary icon-only sm"
+          onClick={onRequestReset}
+          title="Réinitialiser (résultat validé par erreur)"
+          aria-label="Réinitialiser le résultat"
+          style={{ color: 'var(--danger)' }}
+        >
+          <RotateCcw size={15} />
         </button>
       </div>
     );
@@ -342,6 +354,8 @@ export function MatchesPage() {
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Match | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [confirmReset, setConfirmReset] = useState<Match | null>(null);
+  const [resetting, setResetting] = useState(false);
   const [editMatch, setEditMatch] = useState<Match | null>(null);
   const [matchesPage, setMatchesPage] = useState(0);
   const [matchesTotal, setMatchesTotal] = useState(0);
@@ -442,6 +456,17 @@ export function MatchesPage() {
     if (error) { setError(error.message); return; }
     setConfirmDelete(null);
     if (matches.length === 1 && matchesPage > 0) setMatchesPage((p) => p - 1); else load();
+  }
+
+  async function handleReset() {
+    if (!confirmReset) return;
+    setResetting(true);
+    setError(null);
+    const { error } = await supabase.rpc('reset_match_result', { p_match_id: confirmReset.id });
+    setResetting(false);
+    if (error) { setError(error.message); return; }
+    setConfirmReset(null);
+    load();
   }
 
   return (
@@ -610,7 +635,7 @@ export function MatchesPage() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>{formatKickoff(m.kickoff_at)}</span>
-                    <ScoreCell match={m} home={home} away={away} onDone={load} />
+                    <ScoreCell match={m} home={home} away={away} onDone={load} onRequestReset={() => setConfirmReset(m)} />
                   </div>
                 </div>
               );
@@ -692,6 +717,44 @@ export function MatchesPage() {
                 style={{ background: 'var(--danger)', color: '#fff' }}
               >
                 <Trash2 size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmReset && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'var(--bg-overlay)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50,
+        }}>
+          <div className="card" style={{ maxWidth: 380, width: '90%' }}>
+            <h2 style={{ margin: '0 0 8px', fontSize: 16, color: 'var(--text-strong)' }}>
+              Réinitialiser {(confirmReset.home_team as unknown as Team).name} — {(confirmReset.away_team as unknown as Team).name} ?
+            </h2>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--text-secondary)' }}>
+              Le résultat et le score sont effacés, et les points attribués aux joueurs pour ce match sont annulés.
+              Le match repasse en attente de règlement — utile si le résultat a été validé par erreur. Impossible à annuler.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                className="btn secondary icon-only"
+                disabled={resetting}
+                onClick={() => setConfirmReset(null)}
+                title="Annuler"
+                aria-label="Annuler"
+              >
+                <X size={18} />
+              </button>
+              <button
+                className="btn icon-only"
+                disabled={resetting}
+                onClick={handleReset}
+                title={resetting ? 'Réinitialisation…' : 'Confirmer la réinitialisation'}
+                aria-label={resetting ? 'Réinitialisation…' : 'Confirmer la réinitialisation'}
+                style={{ background: 'var(--danger)', color: '#fff' }}
+              >
+                <RotateCcw size={18} />
               </button>
             </div>
           </div>

@@ -375,6 +375,10 @@ export type Database = {
         };
         Returns: undefined;
       };
+      reset_match_result: {
+        Args: { p_match_id: string };
+        Returns: undefined;
+      };
       get_players_admin: {
         Args: { p_limit?: number; p_offset?: number };
         Returns: {
