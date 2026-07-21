@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Check, Pencil, Plus, X } from 'lucide-react';
+import { Check, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { Database } from '../lib/database.types';
 
@@ -161,6 +161,8 @@ export function MatchesPage() {
   const [contests, setContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Match | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [contestId, setContestId] = useState('');
   const [sport, setSport] = useState<Sport>('football');
@@ -222,6 +224,17 @@ export function MatchesPage() {
     setSaving(false);
     if (error) { setError(error.message); return; }
     setCompetition(''); setHomeName(''); setHomeAbbr(''); setAwayName(''); setAwayAbbr(''); setKickoffAt('');
+    load();
+  }
+
+  async function handleDelete() {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    setError(null);
+    const { error } = await supabase.from('matches').delete().eq('id', confirmDelete.id);
+    setDeleting(false);
+    if (error) { setError(error.message); return; }
+    setConfirmDelete(null);
     load();
   }
 
@@ -345,6 +358,7 @@ export function MatchesPage() {
                 <th style={{ padding: '6px 8px' }}>Coup d'envoi</th>
                 <th style={{ padding: '6px 8px' }}>Statut</th>
                 <th style={{ padding: '6px 8px' }}>Résultat / Régler</th>
+                <th style={{ padding: '6px 8px' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -370,6 +384,18 @@ export function MatchesPage() {
                     <td style={{ padding: '10px 8px' }}>
                       <ScoreCell match={m} home={home} away={away} onDone={load} />
                     </td>
+                    <td style={{ padding: '10px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <button
+                        type="button"
+                        className="btn secondary icon-only sm"
+                        onClick={() => setConfirmDelete(m)}
+                        title="Supprimer le match"
+                        aria-label="Supprimer le match"
+                        style={{ color: 'var(--danger)' }}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -378,6 +404,44 @@ export function MatchesPage() {
           </div>
         )}
       </div>
+
+      {confirmDelete && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'var(--bg-overlay)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50,
+        }}>
+          <div className="card" style={{ maxWidth: 380, width: '90%' }}>
+            <h2 style={{ margin: '0 0 8px', fontSize: 16, color: 'var(--text-strong)' }}>
+              Supprimer {(confirmDelete.home_team as unknown as Team).name} — {(confirmDelete.away_team as unknown as Team).name} ?
+            </h2>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--text-secondary)' }}>
+              Cette action supprime définitivement le match ainsi que tous les pronostics des joueurs sur cette
+              rencontre : leurs points, bonus et malus attribués disparaissent avec. Impossible à annuler.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                className="btn secondary icon-only"
+                disabled={deleting}
+                onClick={() => setConfirmDelete(null)}
+                title="Annuler"
+                aria-label="Annuler"
+              >
+                <X size={18} />
+              </button>
+              <button
+                className="btn icon-only"
+                disabled={deleting}
+                onClick={handleDelete}
+                title={deleting ? 'Suppression…' : 'Confirmer la suppression'}
+                aria-label={deleting ? 'Suppression…' : 'Confirmer la suppression'}
+                style={{ background: 'var(--danger)', color: '#fff' }}
+              >
+                <Trash2 size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
