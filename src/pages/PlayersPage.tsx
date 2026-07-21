@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { ShieldCheck, Trash2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ShieldCheck, Trash2, X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
+
+const PAGE_SIZE = 50;
 
 type PlayerRow = {
   id: string;
@@ -15,6 +17,8 @@ type ConfirmAction = { type: 'delete' | 'promote'; player: PlayerRow };
 
 export function PlayersPage({ currentUserRole }: { currentUserRole: 'player' | 'animateur' | 'admin' }) {
   const [players, setPlayers] = useState<PlayerRow[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
@@ -23,13 +27,18 @@ export function PlayersPage({ currentUserRole }: { currentUserRole: 'player' | '
   async function load() {
     setLoading(true);
     setError(null);
-    const { data, error } = await supabase.rpc('get_players_admin');
+    const { data, error } = await supabase.rpc('get_players_admin', {
+      p_limit: PAGE_SIZE,
+      p_offset: page * PAGE_SIZE,
+    });
     if (error) { setError(error.message); setLoading(false); return; }
-    setPlayers((data as PlayerRow[]) || []);
+    const rows = (data as (PlayerRow & { total_count: number })[]) || [];
+    setPlayers(rows);
+    setTotalCount(rows[0]?.total_count ?? 0);
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [page]);
 
   async function handleDelete() {
     if (!confirmAction) return;
@@ -39,7 +48,7 @@ export function PlayersPage({ currentUserRole }: { currentUserRole: 'player' | '
     setBusy(false);
     if (error) { setError(error.message); return; }
     setConfirmAction(null);
-    load();
+    if (players.length === 1 && page > 0) setPage((p) => p - 1); else load();
   }
 
   async function handlePromote() {
@@ -136,6 +145,36 @@ export function PlayersPage({ currentUserRole }: { currentUserRole: 'player' | '
           </tbody>
         </table>
       </div>
+
+      {!loading && totalCount > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+            {page * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE + players.length, totalCount)} sur {totalCount} joueurs
+          </span>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              type="button"
+              className="btn secondary icon-only sm"
+              disabled={page === 0}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              title="Page précédente"
+              aria-label="Page précédente"
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <button
+              type="button"
+              className="btn secondary icon-only sm"
+              disabled={(page + 1) * PAGE_SIZE >= totalCount}
+              onClick={() => setPage((p) => p + 1)}
+              title="Page suivante"
+              aria-label="Page suivante"
+            >
+              <ChevronRight size={15} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {confirmAction && confirmAction.type === 'delete' && (
         <div style={{
