@@ -5,6 +5,7 @@ import type { Database } from '../lib/database.types';
 
 type Match = Database['public']['Tables']['matches']['Row'];
 type Contest = Database['public']['Tables']['contests']['Row'];
+type ScoringRule = Database['public']['Tables']['scoring_rules']['Row'];
 type Sport = Database['public']['Enums']['sport_type'];
 type PickType = Database['public']['Enums']['pick_type'];
 type Team = { name: string; abbr?: string; color?: string; textColor?: string };
@@ -159,6 +160,7 @@ function ScoreCell({ match, home, away, onDone }: { match: Match; home: Team; aw
 export function MatchesPage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [contests, setContests] = useState<Contest[]>([]);
+  const [rules, setRules] = useState<ScoringRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Match | null>(null);
@@ -189,17 +191,25 @@ export function MatchesPage() {
 
   async function load() {
     setLoading(true);
-    const [{ data: m, error: e1 }, { data: c, error: e2 }] = await Promise.all([
+    const [{ data: m, error: e1 }, { data: c, error: e2 }, { data: r, error: e3 }] = await Promise.all([
       supabase.from('matches').select('*').order('kickoff_at', { ascending: false }),
       supabase.from('contests').select('*').order('created_at', { ascending: false }),
+      supabase.from('scoring_rules').select('*'),
     ]);
-    if (e1 || e2) setError((e1 || e2)!.message);
+    if (e1 || e2 || e3) setError((e1 || e2 || e3)!.message);
     setMatches(m || []);
     setContests(c || []);
+    setRules(r || []);
     setLoading(false);
   }
 
   useEffect(() => { load(); }, []);
+
+  // La règle "Défaut" (aucun concours choisi, ou concours sans règle assignée)
+  // pondère par les cotes -- même comportement que settle_match côté serveur.
+  const selectedContest = contests.find((c) => c.id === contestId);
+  const selectedRule = rules.find((r) => r.id === selectedContest?.scoring_rule_id);
+  const oddsWeighted = selectedContest ? (selectedRule ? selectedRule.odds_weighted : true) : true;
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
@@ -207,9 +217,11 @@ export function MatchesPage() {
     setError(null);
     const home: Team = { name: homeName, abbr: homeAbbr || undefined, color: homeColor };
     const away: Team = { name: awayName, abbr: awayAbbr || undefined, color: awayColor };
-    const odds = allowsDraw
-      ? { home: Number(oddsHome), draw: Number(oddsDraw), away: Number(oddsAway) }
-      : { home: Number(oddsHome), away: Number(oddsAway) };
+    const odds = !oddsWeighted
+      ? null
+      : allowsDraw
+        ? { home: Number(oddsHome), draw: Number(oddsDraw), away: Number(oddsAway) }
+        : { home: Number(oddsHome), away: Number(oddsAway) };
     const { error } = await supabase.from('matches').insert({
       contest_id: contestId || null,
       sport,
@@ -314,21 +326,30 @@ export function MatchesPage() {
             <label htmlFor="m-kickoff">Coup d'envoi</label>
             <input id="m-kickoff" type="datetime-local" value={kickoffAt} onChange={(e) => setKickoffAt(e.target.value)} required />
           </div>
-          <div className="field" style={{ flex: '0 1 90px' }}>
-            <label htmlFor="m-odds-home">Cote 1</label>
-            <input id="m-odds-home" type="number" step="0.1" min="1" value={oddsHome} onChange={(e) => setOddsHome(e.target.value)} />
-          </div>
-          {allowsDraw && (
-            <div className="field" style={{ flex: '0 1 90px' }}>
-              <label htmlFor="m-odds-draw">Cote N</label>
-              <input id="m-odds-draw" type="number" step="0.1" min="1" value={oddsDraw} onChange={(e) => setOddsDraw(e.target.value)} />
-            </div>
+          {oddsWeighted && (
+            <>
+              <div className="field" style={{ flex: '0 1 90px' }}>
+                <label htmlFor="m-odds-home">Cote 1</label>
+                <input id="m-odds-home" type="number" step="0.1" min="1" value={oddsHome} onChange={(e) => setOddsHome(e.target.value)} />
+              </div>
+              {allowsDraw && (
+                <div className="field" style={{ flex: '0 1 90px' }}>
+                  <label htmlFor="m-odds-draw">Cote N</label>
+                  <input id="m-odds-draw" type="number" step="0.1" min="1" value={oddsDraw} onChange={(e) => setOddsDraw(e.target.value)} />
+                </div>
+              )}
+              <div className="field" style={{ flex: '0 1 90px' }}>
+                <label htmlFor="m-odds-away">Cote 2</label>
+                <input id="m-odds-away" type="number" step="0.1" min="1" value={oddsAway} onChange={(e) => setOddsAway(e.target.value)} />
+              </div>
+            </>
           )}
-          <div className="field" style={{ flex: '0 1 90px' }}>
-            <label htmlFor="m-odds-away">Cote 2</label>
-            <input id="m-odds-away" type="number" step="0.1" min="1" value={oddsAway} onChange={(e) => setOddsAway(e.target.value)} />
-          </div>
         </div>
+        {!oddsWeighted && (
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--text-tertiary)' }}>
+            La règle de points de ce concours ne pondère pas par les cotes : aucune cote à saisir.
+          </p>
+        )}
 
         {error && <div style={{ color: 'var(--danger)', fontSize: 13 }}>{error}</div>}
         <button
