@@ -122,6 +122,183 @@ function SettleForm({ match, home, away, editingSettled, onDone, onCancel }: {
   );
 }
 
+function isFutureMatch(match: Match) {
+  return new Date(match.kickoff_at).getTime() > Date.now();
+}
+
+function EditMatchModal({ match, contests, rules, onDone, onCancel }: {
+  match: Match; contests: Contest[]; rules: ScoringRule[]; onDone: () => void; onCancel: () => void;
+}) {
+  const home = match.home_team as unknown as Team;
+  const away = match.away_team as unknown as Team;
+  const odds = match.odds as unknown as { home: number; draw?: number; away: number } | null;
+
+  const [contestId, setContestId] = useState(match.contest_id || '');
+  const [sport, setSport] = useState<Sport>(match.sport);
+  const [allowsDraw, setAllowsDraw] = useState(match.allows_draw);
+  const [requiresScore, setRequiresScore] = useState(match.requires_score);
+  const [competition, setCompetition] = useState(match.competition);
+  const [homeName, setHomeName] = useState(home.name);
+  const [homeAbbr, setHomeAbbr] = useState(home.abbr || '');
+  const [homeColor, setHomeColor] = useState(home.color || '#00E676');
+  const [awayName, setAwayName] = useState(away.name);
+  const [awayAbbr, setAwayAbbr] = useState(away.abbr || '');
+  const [awayColor, setAwayColor] = useState(away.color || '#4D7CFF');
+  const [kickoffAt, setKickoffAt] = useState(() => {
+    const d = new Date(match.kickoff_at);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  });
+  const [oddsHome, setOddsHome] = useState(odds ? String(odds.home) : '1.8');
+  const [oddsDraw, setOddsDraw] = useState(odds?.draw !== undefined ? String(odds.draw) : '3.4');
+  const [oddsAway, setOddsAway] = useState(odds ? String(odds.away) : '4.2');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const selectedContest = contests.find((c) => c.id === contestId);
+  const selectedRule = rules.find((r) => r.id === selectedContest?.scoring_rule_id);
+  const oddsWeighted = selectedContest ? (selectedRule ? selectedRule.odds_weighted : true) : true;
+
+  function handleSportChange(s: Sport) {
+    setSport(s);
+    setAllowsDraw(SPORT_DEFAULTS[s].allowsDraw);
+    setRequiresScore(SPORT_DEFAULTS[s].requiresScore);
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    const updatedHome: Team = { name: homeName, abbr: homeAbbr || undefined, color: homeColor };
+    const updatedAway: Team = { name: awayName, abbr: awayAbbr || undefined, color: awayColor };
+    const updatedOdds = !oddsWeighted
+      ? null
+      : allowsDraw
+        ? { home: Number(oddsHome), draw: Number(oddsDraw), away: Number(oddsAway) }
+        : { home: Number(oddsHome), away: Number(oddsAway) };
+    const { error } = await supabase.from('matches').update({
+      contest_id: contestId || null,
+      sport,
+      competition,
+      home_team: updatedHome,
+      away_team: updatedAway,
+      kickoff_at: new Date(kickoffAt).toISOString(),
+      odds: updatedOdds,
+      allows_draw: allowsDraw,
+      requires_score: requiresScore,
+    }).eq('id', match.id);
+    setSaving(false);
+    if (error) { setError(error.message); return; }
+    onDone();
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'var(--bg-overlay)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16, overflowY: 'auto',
+    }}>
+      <form onSubmit={handleSubmit} className="card" style={{ maxWidth: 520, width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <h2 style={{ margin: 0, fontSize: 16, color: 'var(--text-strong)' }}>Modifier le match</h2>
+
+        <div className="form-row">
+          <div className="field" style={{ flex: '1 1 140px' }}>
+            <label htmlFor="em-contest">Concours</label>
+            <select id="em-contest" value={contestId} onChange={(e) => setContestId(e.target.value)}>
+              <option value="">— Aucun —</option>
+              {contests.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div className="field" style={{ flex: '1 1 120px' }}>
+            <label htmlFor="em-sport">Sport</label>
+            <select id="em-sport" value={sport} onChange={(e) => handleSportChange(e.target.value as Sport)}>
+              {SPORTS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="field" style={{ flex: '2 1 160px' }}>
+            <label htmlFor="em-competition">Compétition</label>
+            <input id="em-competition" value={competition} onChange={(e) => setCompetition(e.target.value)} required />
+          </div>
+        </div>
+
+        <div className="form-row" style={{ alignItems: 'center' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-secondary)' }}>
+            <input type="checkbox" checked={allowsDraw} onChange={(e) => setAllowsDraw(e.target.checked)} />
+            Match nul possible
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-secondary)' }}>
+            <input type="checkbox" checked={requiresScore} onChange={(e) => setRequiresScore(e.target.checked)} />
+            Score à saisir au règlement
+          </label>
+        </div>
+
+        <div className="form-row">
+          <div className="field" style={{ flex: '1 1 160px' }}>
+            <label htmlFor="em-home-name">Équipe/joueur domicile</label>
+            <input id="em-home-name" value={homeName} onChange={(e) => setHomeName(e.target.value)} required />
+          </div>
+          <div className="field" style={{ flex: '0 1 90px' }}>
+            <label htmlFor="em-home-abbr">Abrév.</label>
+            <input id="em-home-abbr" value={homeAbbr} onChange={(e) => setHomeAbbr(e.target.value.toUpperCase())} maxLength={4} />
+          </div>
+          <div className="field" style={{ flex: '0 0 70px' }}>
+            <label htmlFor="em-home-color">Couleur</label>
+            <input id="em-home-color" type="color" value={homeColor} onChange={(e) => setHomeColor(e.target.value)} />
+          </div>
+        </div>
+        <div className="form-row">
+          <div className="field" style={{ flex: '1 1 160px' }}>
+            <label htmlFor="em-away-name">Équipe/joueur extérieur</label>
+            <input id="em-away-name" value={awayName} onChange={(e) => setAwayName(e.target.value)} required />
+          </div>
+          <div className="field" style={{ flex: '0 1 90px' }}>
+            <label htmlFor="em-away-abbr">Abrév.</label>
+            <input id="em-away-abbr" value={awayAbbr} onChange={(e) => setAwayAbbr(e.target.value.toUpperCase())} maxLength={4} />
+          </div>
+          <div className="field" style={{ flex: '0 0 70px' }}>
+            <label htmlFor="em-away-color">Couleur</label>
+            <input id="em-away-color" type="color" value={awayColor} onChange={(e) => setAwayColor(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="form-row">
+          <div className="field" style={{ flex: '1 1 180px' }}>
+            <label htmlFor="em-kickoff">Coup d'envoi</label>
+            <input id="em-kickoff" type="datetime-local" value={kickoffAt} onChange={(e) => setKickoffAt(e.target.value)} required />
+          </div>
+          {oddsWeighted && (
+            <>
+              <div className="field" style={{ flex: '0 1 90px' }}>
+                <label htmlFor="em-odds-home">Cote 1</label>
+                <input id="em-odds-home" type="number" step="0.1" min="1" value={oddsHome} onChange={(e) => setOddsHome(e.target.value)} />
+              </div>
+              {allowsDraw && (
+                <div className="field" style={{ flex: '0 1 90px' }}>
+                  <label htmlFor="em-odds-draw">Cote N</label>
+                  <input id="em-odds-draw" type="number" step="0.1" min="1" value={oddsDraw} onChange={(e) => setOddsDraw(e.target.value)} />
+                </div>
+              )}
+              <div className="field" style={{ flex: '0 1 90px' }}>
+                <label htmlFor="em-odds-away">Cote 2</label>
+                <input id="em-odds-away" type="number" step="0.1" min="1" value={oddsAway} onChange={(e) => setOddsAway(e.target.value)} />
+              </div>
+            </>
+          )}
+        </div>
+
+        {error && <div style={{ color: 'var(--danger)', fontSize: 13 }}>{error}</div>}
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button type="button" className="btn secondary icon-only" disabled={saving} onClick={onCancel} title="Annuler" aria-label="Annuler">
+            <X size={18} />
+          </button>
+          <button type="submit" className="btn icon-only" disabled={saving} title="Enregistrer" aria-label="Enregistrer">
+            <Check size={18} />
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 function ScoreCell({ match, home, away, onDone }: { match: Match; home: Team; away: Team; onDone: () => void }) {
   const [editing, setEditing] = useState(false);
   const score = match.score as unknown as { home: number; away: number } | null;
@@ -165,6 +342,7 @@ export function MatchesPage() {
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Match | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [editMatch, setEditMatch] = useState<Match | null>(null);
 
   const [contestId, setContestId] = useState('');
   const [sport, setSport] = useState<Sport>('football');
@@ -406,6 +584,18 @@ export function MatchesPage() {
                       <ScoreCell match={m} home={home} away={away} onDone={load} />
                     </td>
                     <td style={{ padding: '10px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {isFutureMatch(m) && (
+                        <button
+                          type="button"
+                          className="btn secondary icon-only sm"
+                          onClick={() => setEditMatch(m)}
+                          title="Modifier le match"
+                          aria-label="Modifier le match"
+                          style={{ marginRight: 6 }}
+                        >
+                          <Pencil size={15} />
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="btn secondary icon-only sm"
@@ -425,6 +615,16 @@ export function MatchesPage() {
           </div>
         )}
       </div>
+
+      {editMatch && (
+        <EditMatchModal
+          match={editMatch}
+          contests={contests}
+          rules={rules}
+          onDone={() => { setEditMatch(null); load(); }}
+          onCancel={() => setEditMatch(null)}
+        />
+      )}
 
       {confirmDelete && (
         <div style={{
