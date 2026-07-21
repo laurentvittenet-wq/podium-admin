@@ -91,6 +91,16 @@ table { border-collapse: collapse; width: 100%; }
   color: #fff;
   box-shadow: none;
 }
+.btn.icon-only {
+  width: 40px;
+  padding: 0;
+  gap: 0;
+  flex: none;
+}
+.btn.icon-only.sm {
+  width: 30px;
+  height: 30px;
+}
 
 .badge {
   display: inline-flex;

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Check, Pencil, Plus, X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { Database } from '../lib/database.types';
 
@@ -39,12 +40,26 @@ function SettleForm({ match, editingSettled, onDone, onCancel }: {
         <span style={{ color: 'var(--text-tertiary)' }}>:</span>
         <input type="number" min={0} value={away} onChange={(e) => setAway(e.target.value)}
           style={{ width: 44, height: 30, textAlign: 'center', background: 'var(--bg-surface-3)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text-strong)' }} />
-        <button type="button" className="btn" disabled={busy} onClick={handleSettle} style={{ height: 30, padding: '0 12px', fontSize: 12, flex: 'none' }}>
-          {editingSettled ? 'Enregistrer' : 'Régler'}
+        <button
+          type="button"
+          className="btn icon-only sm"
+          disabled={busy}
+          onClick={handleSettle}
+          title={editingSettled ? 'Enregistrer' : 'Régler'}
+          aria-label={editingSettled ? 'Enregistrer' : 'Régler'}
+        >
+          <Check size={15} />
         </button>
         {onCancel && (
-          <button type="button" className="btn secondary" disabled={busy} onClick={onCancel} style={{ height: 30, padding: '0 12px', fontSize: 12, flex: 'none' }}>
-            Annuler
+          <button
+            type="button"
+            className="btn secondary icon-only sm"
+            disabled={busy}
+            onClick={onCancel}
+            title="Annuler"
+            aria-label="Annuler"
+          >
+            <X size={15} />
           </button>
         )}
       </div>
@@ -66,8 +81,14 @@ function ScoreCell({ match, onDone }: { match: Match; onDone: () => void }) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-strong)' }}>{score?.home}:{score?.away}</span>
-        <button type="button" className="btn secondary" onClick={() => setEditing(true)} style={{ height: 30, padding: '0 10px', fontSize: 12 }}>
-          Modifier
+        <button
+          type="button"
+          className="btn secondary icon-only sm"
+          onClick={() => setEditing(true)}
+          title="Modifier"
+          aria-label="Modifier"
+        >
+          <Pencil size={15} />
         </button>
       </div>
     );
@@ -224,8 +245,15 @@ export function MatchesPage() {
         </div>
 
         {error && <div style={{ color: 'var(--danger)', fontSize: 13 }}>{error}</div>}
-        <button type="submit" className="btn" disabled={saving} style={{ alignSelf: 'flex-start' }}>
-          Créer le match
+        <button
+          type="submit"
+          className="btn icon-only"
+          disabled={saving}
+          title="Créer le match"
+          aria-label="Créer le match"
+          style={{ alignSelf: 'flex-start' }}
+        >
+          <Plus size={18} />
         </button>
       </form>
 

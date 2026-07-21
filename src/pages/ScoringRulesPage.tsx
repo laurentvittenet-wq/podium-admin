@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Plus } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { Database } from '../lib/database.types';
 
@@ -105,8 +106,15 @@ export function ScoringRulesPage() {
         </div>
 
         {error && <div style={{ color: 'var(--danger)', fontSize: 13 }}>{error}</div>}
-        <button type="submit" className="btn" disabled={saving} style={{ alignSelf: 'flex-start' }}>
-          Créer la règle
+        <button
+          type="submit"
+          className="btn icon-only"
+          disabled={saving}
+          title="Créer la règle"
+          aria-label="Créer la règle"
+          style={{ alignSelf: 'flex-start' }}
+        >
+          <Plus size={18} />
         </button>
       </form>
 

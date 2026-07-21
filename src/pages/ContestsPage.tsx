@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Check, Pencil, Plus, X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { Database } from '../lib/database.types';
 
@@ -131,12 +132,27 @@ export function ContestsPage() {
 
         {error && <div style={{ color: 'var(--danger)', fontSize: 13 }}>{error}</div>}
         <div style={{ display: 'flex', gap: 8 }}>
-          <button type="submit" className="btn" disabled={saving} style={{ alignSelf: 'flex-start' }}>
-            {editingId ? 'Enregistrer les modifications' : 'Créer le concours'}
+          <button
+            type="submit"
+            className="btn icon-only"
+            disabled={saving}
+            title={editingId ? 'Enregistrer les modifications' : 'Créer le concours'}
+            aria-label={editingId ? 'Enregistrer les modifications' : 'Créer le concours'}
+            style={{ alignSelf: 'flex-start' }}
+          >
+            {editingId ? <Check size={18} /> : <Plus size={18} />}
           </button>
           {editingId && (
-            <button type="button" className="btn secondary" disabled={saving} onClick={resetForm} style={{ alignSelf: 'flex-start' }}>
-              Annuler
+            <button
+              type="button"
+              className="btn secondary icon-only"
+              disabled={saving}
+              onClick={resetForm}
+              title="Annuler"
+              aria-label="Annuler"
+              style={{ alignSelf: 'flex-start' }}
+            >
+              <X size={18} />
             </button>
           )}
         </div>
@@ -172,11 +188,12 @@ export function ContestsPage() {
                   <td style={{ padding: '10px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                     <button
                       type="button"
-                      className="btn secondary"
+                      className="btn secondary icon-only sm"
                       onClick={() => handleEdit(c)}
-                      style={{ height: 30, padding: '0 12px', fontSize: 12 }}
+                      title="Modifier"
+                      aria-label="Modifier"
                     >
-                      Modifier
+                      <Pencil size={15} />
                     </button>
                   </td>
                 </tr>
