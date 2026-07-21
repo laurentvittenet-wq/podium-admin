@@ -29,13 +29,13 @@ function SettleForm({ match, onDone }: { match: Match; onDone: () => void }) {
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
       <input type="number" min={0} value={home} onChange={(e) => setHome(e.target.value)}
         style={{ width: 44, height: 30, textAlign: 'center', background: 'var(--bg-surface-3)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text-strong)' }} />
       <span style={{ color: 'var(--text-tertiary)' }}>:</span>
       <input type="number" min={0} value={away} onChange={(e) => setAway(e.target.value)}
         style={{ width: 44, height: 30, textAlign: 'center', background: 'var(--bg-surface-3)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text-strong)' }} />
-      <button type="button" className="btn" disabled={busy} onClick={handleSettle} style={{ height: 30, padding: '0 12px', fontSize: 12 }}>
+      <button type="button" className="btn" disabled={busy} onClick={handleSettle} style={{ height: 30, padding: '0 12px', fontSize: 12, flex: 'none' }}>
         Régler
       </button>
       {error && <span style={{ color: 'var(--danger)', fontSize: 12 }}>{error}</span>}
@@ -113,71 +113,71 @@ export function MatchesPage() {
 
       <form onSubmit={handleCreate} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <h2 style={{ margin: 0, fontSize: 16, color: 'var(--text-strong)' }}>Nouveau match</h2>
-        <div style={{ display: 'flex', gap: 16 }}>
-          <div className="field" style={{ flex: 1 }}>
+        <div className="form-row">
+          <div className="field" style={{ flex: '1 1 140px' }}>
             <label htmlFor="m-contest">Concours</label>
             <select id="m-contest" value={contestId} onChange={(e) => setContestId(e.target.value)}>
               <option value="">— Aucun —</option>
               {contests.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
-          <div className="field" style={{ flex: 1 }}>
+          <div className="field" style={{ flex: '1 1 120px' }}>
             <label htmlFor="m-sport">Sport</label>
             <select id="m-sport" value={sport} onChange={(e) => setSport(e.target.value as Sport)}>
               {SPORTS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-          <div className="field" style={{ flex: 2 }}>
+          <div className="field" style={{ flex: '2 1 160px' }}>
             <label htmlFor="m-competition">Compétition</label>
             <input id="m-competition" value={competition} onChange={(e) => setCompetition(e.target.value)} placeholder="Ligue 1" required />
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 16 }}>
-          <div className="field" style={{ flex: 1 }}>
+        <div className="form-row">
+          <div className="field" style={{ flex: '1 1 160px' }}>
             <label htmlFor="m-home-name">Équipe/joueur domicile</label>
             <input id="m-home-name" value={homeName} onChange={(e) => setHomeName(e.target.value)} required />
           </div>
-          <div className="field" style={{ width: 90 }}>
+          <div className="field" style={{ flex: '0 1 90px' }}>
             <label htmlFor="m-home-abbr">Abrév.</label>
             <input id="m-home-abbr" value={homeAbbr} onChange={(e) => setHomeAbbr(e.target.value.toUpperCase())} maxLength={4} />
           </div>
-          <div className="field" style={{ width: 70 }}>
+          <div className="field" style={{ flex: '0 0 70px' }}>
             <label htmlFor="m-home-color">Couleur</label>
             <input id="m-home-color" type="color" value={homeColor} onChange={(e) => setHomeColor(e.target.value)} />
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 16 }}>
-          <div className="field" style={{ flex: 1 }}>
+        <div className="form-row">
+          <div className="field" style={{ flex: '1 1 160px' }}>
             <label htmlFor="m-away-name">Équipe/joueur extérieur</label>
             <input id="m-away-name" value={awayName} onChange={(e) => setAwayName(e.target.value)} required />
           </div>
-          <div className="field" style={{ width: 90 }}>
+          <div className="field" style={{ flex: '0 1 90px' }}>
             <label htmlFor="m-away-abbr">Abrév.</label>
             <input id="m-away-abbr" value={awayAbbr} onChange={(e) => setAwayAbbr(e.target.value.toUpperCase())} maxLength={4} />
           </div>
-          <div className="field" style={{ width: 70 }}>
+          <div className="field" style={{ flex: '0 0 70px' }}>
             <label htmlFor="m-away-color">Couleur</label>
             <input id="m-away-color" type="color" value={awayColor} onChange={(e) => setAwayColor(e.target.value)} />
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 16 }}>
-          <div className="field" style={{ flex: 1 }}>
+        <div className="form-row">
+          <div className="field" style={{ flex: '1 1 180px' }}>
             <label htmlFor="m-kickoff">Coup d'envoi</label>
             <input id="m-kickoff" type="datetime-local" value={kickoffAt} onChange={(e) => setKickoffAt(e.target.value)} required />
           </div>
-          <div className="field" style={{ width: 100 }}>
+          <div className="field" style={{ flex: '0 1 90px' }}>
             <label htmlFor="m-odds-home">Cote 1</label>
             <input id="m-odds-home" type="number" step="0.1" min="1" value={oddsHome} onChange={(e) => setOddsHome(e.target.value)} />
           </div>
           {sport !== 'tennis' && (
-            <div className="field" style={{ width: 100 }}>
+            <div className="field" style={{ flex: '0 1 90px' }}>
               <label htmlFor="m-odds-draw">Cote N</label>
               <input id="m-odds-draw" type="number" step="0.1" min="1" value={oddsDraw} onChange={(e) => setOddsDraw(e.target.value)} />
             </div>
           )}
-          <div className="field" style={{ width: 100 }}>
+          <div className="field" style={{ flex: '0 1 90px' }}>
             <label htmlFor="m-odds-away">Cote 2</label>
             <input id="m-odds-away" type="number" step="0.1" min="1" value={oddsAway} onChange={(e) => setOddsAway(e.target.value)} />
           </div>
@@ -196,6 +196,7 @@ export function MatchesPage() {
         ) : matches.length === 0 ? (
           <div style={{ color: 'var(--text-tertiary)' }}>Aucun match pour l'instant.</div>
         ) : (
+          <div className="table-scroll">
           <table>
             <thead>
               <tr style={{ textAlign: 'left', color: 'var(--text-tertiary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -212,8 +213,8 @@ export function MatchesPage() {
                 const score = m.score as unknown as { home: number; away: number } | null;
                 return (
                   <tr key={m.id} style={{ borderTop: '1px solid var(--border)' }}>
-                    <td style={{ padding: '10px 8px', color: 'var(--text-strong)', fontWeight: 700 }}>{home.name} — {away.name}</td>
-                    <td style={{ padding: '10px 8px', fontSize: 12, color: 'var(--text-secondary)' }}>{new Date(m.kickoff_at).toLocaleString('fr-FR')}</td>
+                    <td style={{ padding: '10px 8px', color: 'var(--text-strong)', fontWeight: 700, whiteSpace: 'nowrap' }}>{home.name} — {away.name}</td>
+                    <td style={{ padding: '10px 8px', fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{new Date(m.kickoff_at).toLocaleString('fr-FR')}</td>
                     <td style={{ padding: '10px 8px' }}>
                       <span className="badge" style={{
                         background: m.status === 'settled' ? 'var(--success-soft)' : m.status === 'locked' ? 'var(--bg-surface-3)' : 'var(--accent-soft)',
@@ -230,6 +231,7 @@ export function MatchesPage() {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

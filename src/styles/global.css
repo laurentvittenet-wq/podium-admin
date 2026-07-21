@@ -162,6 +162,17 @@ table { border-collapse: collapse; width: 100%; }
   max-width: 900px;
 }
 
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 @media (max-width: 768px) {
   .app-shell {
     display: block;
@@ -207,5 +218,6 @@ table { border-collapse: collapse; width: 100%; }
   .app-main {
     padding: 16px;
     max-width: 100%;
+    overflow-x: hidden;
   }
 }
