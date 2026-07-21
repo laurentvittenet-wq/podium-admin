@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Trash2, X } from 'lucide-react';
+import { ShieldCheck, Trash2, X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 
 type PlayerRow = {
@@ -11,12 +11,14 @@ type PlayerRow = {
   created_at: string;
 };
 
-export function PlayersPage() {
+type ConfirmAction = { type: 'delete' | 'promote'; player: PlayerRow };
+
+export function PlayersPage({ currentUserRole }: { currentUserRole: 'player' | 'animateur' | 'admin' }) {
   const [players, setPlayers] = useState<PlayerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [confirmTarget, setConfirmTarget] = useState<PlayerRow | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [busy, setBusy] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -30,13 +32,24 @@ export function PlayersPage() {
   useEffect(() => { load(); }, []);
 
   async function handleDelete() {
-    if (!confirmTarget) return;
-    setDeleting(true);
+    if (!confirmAction) return;
+    setBusy(true);
     setError(null);
-    const { error } = await supabase.rpc('delete_player_admin', { p_user_id: confirmTarget.id });
-    setDeleting(false);
+    const { error } = await supabase.rpc('delete_player_admin', { p_user_id: confirmAction.player.id });
+    setBusy(false);
     if (error) { setError(error.message); return; }
-    setConfirmTarget(null);
+    setConfirmAction(null);
+    load();
+  }
+
+  async function handlePromote() {
+    if (!confirmAction) return;
+    setBusy(true);
+    setError(null);
+    const { error } = await supabase.rpc('promote_player_admin', { p_user_id: confirmAction.player.id });
+    setBusy(false);
+    if (error) { setError(error.message); return; }
+    setConfirmAction(null);
     load();
   }
 
@@ -95,15 +108,28 @@ export function PlayersPage() {
                   {new Date(p.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                 </td>
                 <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                  <button
-                    className="btn secondary icon-only sm"
-                    onClick={() => setConfirmTarget(p)}
-                    title="Supprimer"
-                    aria-label="Supprimer"
-                    style={{ color: 'var(--danger)' }}
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  <div style={{ display: 'inline-flex', gap: 6 }}>
+                    {currentUserRole === 'admin' && p.role === 'player' && (
+                      <button
+                        className="btn secondary icon-only sm"
+                        onClick={() => setConfirmAction({ type: 'promote', player: p })}
+                        title="Promouvoir en admin"
+                        aria-label="Promouvoir en admin"
+                        style={{ color: 'var(--accent)' }}
+                      >
+                        <ShieldCheck size={15} />
+                      </button>
+                    )}
+                    <button
+                      className="btn secondary icon-only sm"
+                      onClick={() => setConfirmAction({ type: 'delete', player: p })}
+                      title="Supprimer"
+                      aria-label="Supprimer"
+                      style={{ color: 'var(--danger)' }}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -111,24 +137,24 @@ export function PlayersPage() {
         </table>
       </div>
 
-      {confirmTarget && (
+      {confirmAction && confirmAction.type === 'delete' && (
         <div style={{
           position: 'fixed', inset: 0, background: 'var(--bg-overlay)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50,
         }}>
           <div className="card" style={{ maxWidth: 380, width: '90%' }}>
             <h2 style={{ margin: '0 0 8px', fontSize: 16, color: 'var(--text-strong)' }}>
-              Supprimer {confirmTarget.pseudo} ?
+              Supprimer {confirmAction.player.pseudo} ?
             </h2>
             <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--text-secondary)' }}>
-              Cette action supprime définitivement le compte ({confirmTarget.email ?? 'sans email'})
+              Cette action supprime définitivement le compte ({confirmAction.player.email ?? 'sans email'})
               et toutes ses données associées (pronostics, historique, XP). Impossible à annuler.
             </p>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button
                 className="btn secondary icon-only"
-                disabled={deleting}
-                onClick={() => setConfirmTarget(null)}
+                disabled={busy}
+                onClick={() => setConfirmAction(null)}
                 title="Annuler"
                 aria-label="Annuler"
               >
@@ -136,13 +162,51 @@ export function PlayersPage() {
               </button>
               <button
                 className="btn icon-only"
-                disabled={deleting}
+                disabled={busy}
                 onClick={handleDelete}
-                title={deleting ? 'Suppression…' : 'Confirmer la suppression'}
-                aria-label={deleting ? 'Suppression…' : 'Confirmer la suppression'}
+                title={busy ? 'Suppression…' : 'Confirmer la suppression'}
+                aria-label={busy ? 'Suppression…' : 'Confirmer la suppression'}
                 style={{ background: 'var(--danger)', color: '#fff' }}
               >
                 <Trash2 size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmAction && confirmAction.type === 'promote' && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'var(--bg-overlay)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50,
+        }}>
+          <div className="card" style={{ maxWidth: 380, width: '90%' }}>
+            <h2 style={{ margin: '0 0 8px', fontSize: 16, color: 'var(--text-strong)' }}>
+              Promouvoir {confirmAction.player.pseudo} en admin ?
+            </h2>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--text-secondary)' }}>
+              Ce compte deviendra administrateur et n'apparaîtra plus dans le classement joueur.
+              Tous ses pronostics et points remportés seront définitivement supprimés. Impossible à annuler.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                className="btn secondary icon-only"
+                disabled={busy}
+                onClick={() => setConfirmAction(null)}
+                title="Annuler"
+                aria-label="Annuler"
+              >
+                <X size={18} />
+              </button>
+              <button
+                className="btn icon-only"
+                disabled={busy}
+                onClick={handlePromote}
+                title={busy ? 'Promotion…' : 'Confirmer la promotion'}
+                aria-label={busy ? 'Promotion…' : 'Confirmer la promotion'}
+                style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
+              >
+                <ShieldCheck size={18} />
               </button>
             </div>
           </div>

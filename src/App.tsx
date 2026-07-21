@@ -95,7 +95,7 @@ export function App() {
       <main className="app-main">
         {page === 'contests' && <ContestsPage />}
         {page === 'matches' && <MatchesPage />}
-        {page === 'players' && <PlayersPage />}
+        {page === 'players' && <PlayersPage currentUserRole={profile.role} />}
         {page === 'rules' && <ScoringRulesPage />}
       </main>
     </div>

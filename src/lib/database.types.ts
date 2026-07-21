@@ -301,6 +301,10 @@ export type Database = {
         Args: { p_user_id: string };
         Returns: undefined;
       };
+      promote_player_admin: {
+        Args: { p_user_id: string };
+        Returns: undefined;
+      };
     };
     Enums: {
       match_status: 'open' | 'locked' | 'live' | 'settled';
