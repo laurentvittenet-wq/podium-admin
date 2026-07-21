@@ -205,7 +205,7 @@ function EditMatchModal({ match, contests, rules, onDone, onCancel }: {
       position: 'fixed', inset: 0, background: 'var(--bg-overlay)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16, overflowY: 'auto',
     }}>
-      <form onSubmit={handleSubmit} className="card" style={{ maxWidth: 520, width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <form onSubmit={handleSubmit} className="card form-compact" style={{ maxWidth: 520, width: '100%', display: 'flex', flexDirection: 'column' }}>
         <h2 style={{ margin: 0, fontSize: 16, color: 'var(--text-strong)' }}>Modifier le match</h2>
 
         <div className="form-row">
@@ -229,40 +229,40 @@ function EditMatchModal({ match, contests, rules, onDone, onCancel }: {
         </div>
 
         <div className="form-row" style={{ alignItems: 'center' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-secondary)' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--text-secondary)' }}>
             <input type="checkbox" checked={allowsDraw} onChange={(e) => setAllowsDraw(e.target.checked)} />
             Match nul possible
           </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-secondary)' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--text-secondary)' }}>
             <input type="checkbox" checked={requiresScore} onChange={(e) => setRequiresScore(e.target.checked)} />
             Score à saisir au règlement
           </label>
         </div>
 
-        <div className="form-row">
-          <div className="field" style={{ flex: '1 1 160px' }}>
+        <div className="form-row" style={{ flexWrap: 'nowrap' }}>
+          <div className="field" style={{ flex: '1 1 80px', minWidth: 0 }}>
             <label htmlFor="em-home-name">Équipe/joueur domicile</label>
             <input id="em-home-name" value={homeName} onChange={(e) => setHomeName(e.target.value)} required />
           </div>
-          <div className="field" style={{ flex: '0 1 90px' }}>
+          <div className="field" style={{ flex: '0 0 50px' }}>
             <label htmlFor="em-home-abbr">Abrév.</label>
             <input id="em-home-abbr" value={homeAbbr} onChange={(e) => setHomeAbbr(e.target.value.toUpperCase())} maxLength={4} />
           </div>
-          <div className="field" style={{ flex: '0 0 70px' }}>
+          <div className="field" style={{ flex: '0 0 34px' }}>
             <label htmlFor="em-home-color">Couleur</label>
             <input id="em-home-color" type="color" value={homeColor} onChange={(e) => setHomeColor(e.target.value)} />
           </div>
         </div>
-        <div className="form-row">
-          <div className="field" style={{ flex: '1 1 160px' }}>
+        <div className="form-row" style={{ flexWrap: 'nowrap' }}>
+          <div className="field" style={{ flex: '1 1 80px', minWidth: 0 }}>
             <label htmlFor="em-away-name">Équipe/joueur extérieur</label>
             <input id="em-away-name" value={awayName} onChange={(e) => setAwayName(e.target.value)} required />
           </div>
-          <div className="field" style={{ flex: '0 1 90px' }}>
+          <div className="field" style={{ flex: '0 0 50px' }}>
             <label htmlFor="em-away-abbr">Abrév.</label>
             <input id="em-away-abbr" value={awayAbbr} onChange={(e) => setAwayAbbr(e.target.value.toUpperCase())} maxLength={4} />
           </div>
-          <div className="field" style={{ flex: '0 0 70px' }}>
+          <div className="field" style={{ flex: '0 0 34px' }}>
             <label htmlFor="em-away-color">Couleur</label>
             <input id="em-away-color" type="color" value={awayColor} onChange={(e) => setAwayColor(e.target.value)} />
           </div>
@@ -273,25 +273,25 @@ function EditMatchModal({ match, contests, rules, onDone, onCancel }: {
             <label htmlFor="em-kickoff">Coup d'envoi</label>
             <input id="em-kickoff" type="datetime-local" value={kickoffAt} onChange={(e) => setKickoffAt(e.target.value)} required />
           </div>
-          {oddsWeighted && (
-            <>
-              <div className="field" style={{ flex: '0 1 90px' }}>
-                <label htmlFor="em-odds-home">Cote 1</label>
-                <input id="em-odds-home" type="number" step="0.1" min="1" value={oddsHome} onChange={(e) => setOddsHome(e.target.value)} />
-              </div>
-              {allowsDraw && (
-                <div className="field" style={{ flex: '0 1 90px' }}>
-                  <label htmlFor="em-odds-draw">Cote N</label>
-                  <input id="em-odds-draw" type="number" step="0.1" min="1" value={oddsDraw} onChange={(e) => setOddsDraw(e.target.value)} />
-                </div>
-              )}
-              <div className="field" style={{ flex: '0 1 90px' }}>
-                <label htmlFor="em-odds-away">Cote 2</label>
-                <input id="em-odds-away" type="number" step="0.1" min="1" value={oddsAway} onChange={(e) => setOddsAway(e.target.value)} />
-              </div>
-            </>
-          )}
         </div>
+        {oddsWeighted && (
+          <div className="form-row" style={{ flexWrap: 'nowrap' }}>
+            <div className="field" style={{ flex: '1 1 0' }}>
+              <label htmlFor="em-odds-home">Cote 1</label>
+              <input id="em-odds-home" type="number" step="0.1" min="1" value={oddsHome} onChange={(e) => setOddsHome(e.target.value)} />
+            </div>
+            {allowsDraw && (
+              <div className="field" style={{ flex: '1 1 0' }}>
+                <label htmlFor="em-odds-draw">Cote N</label>
+                <input id="em-odds-draw" type="number" step="0.1" min="1" value={oddsDraw} onChange={(e) => setOddsDraw(e.target.value)} />
+              </div>
+            )}
+            <div className="field" style={{ flex: '1 1 0' }}>
+              <label htmlFor="em-odds-away">Cote 2</label>
+              <input id="em-odds-away" type="number" step="0.1" min="1" value={oddsAway} onChange={(e) => setOddsAway(e.target.value)} />
+            </div>
+          </div>
+        )}
 
         {error && <div style={{ color: 'var(--danger)', fontSize: 13 }}>{error}</div>}
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -450,7 +450,7 @@ export function MatchesPage() {
         </p>
       </div>
 
-      <form onSubmit={handleCreate} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <form onSubmit={handleCreate} className="card form-compact" style={{ display: 'flex', flexDirection: 'column' }}>
         <h2 style={{ margin: 0, fontSize: 16, color: 'var(--text-strong)' }}>Nouveau match</h2>
         <div className="form-row">
           <div className="field" style={{ flex: '1 1 140px' }}>
@@ -473,40 +473,40 @@ export function MatchesPage() {
         </div>
 
         <div className="form-row" style={{ alignItems: 'center' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-secondary)' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--text-secondary)' }}>
             <input type="checkbox" checked={allowsDraw} onChange={(e) => setAllowsDraw(e.target.checked)} />
             Match nul possible
           </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-secondary)' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--text-secondary)' }}>
             <input type="checkbox" checked={requiresScore} onChange={(e) => setRequiresScore(e.target.checked)} />
             Score à saisir au règlement
           </label>
         </div>
 
-        <div className="form-row">
-          <div className="field" style={{ flex: '1 1 160px' }}>
+        <div className="form-row" style={{ flexWrap: 'nowrap' }}>
+          <div className="field" style={{ flex: '1 1 80px', minWidth: 0 }}>
             <label htmlFor="m-home-name">Équipe/joueur domicile</label>
             <input id="m-home-name" value={homeName} onChange={(e) => setHomeName(e.target.value)} required />
           </div>
-          <div className="field" style={{ flex: '0 1 90px' }}>
+          <div className="field" style={{ flex: '0 0 50px' }}>
             <label htmlFor="m-home-abbr">Abrév.</label>
             <input id="m-home-abbr" value={homeAbbr} onChange={(e) => setHomeAbbr(e.target.value.toUpperCase())} maxLength={4} />
           </div>
-          <div className="field" style={{ flex: '0 0 70px' }}>
+          <div className="field" style={{ flex: '0 0 34px' }}>
             <label htmlFor="m-home-color">Couleur</label>
             <input id="m-home-color" type="color" value={homeColor} onChange={(e) => setHomeColor(e.target.value)} />
           </div>
         </div>
-        <div className="form-row">
-          <div className="field" style={{ flex: '1 1 160px' }}>
+        <div className="form-row" style={{ flexWrap: 'nowrap' }}>
+          <div className="field" style={{ flex: '1 1 80px', minWidth: 0 }}>
             <label htmlFor="m-away-name">Équipe/joueur extérieur</label>
             <input id="m-away-name" value={awayName} onChange={(e) => setAwayName(e.target.value)} required />
           </div>
-          <div className="field" style={{ flex: '0 1 90px' }}>
+          <div className="field" style={{ flex: '0 0 50px' }}>
             <label htmlFor="m-away-abbr">Abrév.</label>
             <input id="m-away-abbr" value={awayAbbr} onChange={(e) => setAwayAbbr(e.target.value.toUpperCase())} maxLength={4} />
           </div>
-          <div className="field" style={{ flex: '0 0 70px' }}>
+          <div className="field" style={{ flex: '0 0 34px' }}>
             <label htmlFor="m-away-color">Couleur</label>
             <input id="m-away-color" type="color" value={awayColor} onChange={(e) => setAwayColor(e.target.value)} />
           </div>
@@ -517,25 +517,25 @@ export function MatchesPage() {
             <label htmlFor="m-kickoff">Coup d'envoi</label>
             <input id="m-kickoff" type="datetime-local" value={kickoffAt} onChange={(e) => setKickoffAt(e.target.value)} required />
           </div>
-          {oddsWeighted && (
-            <>
-              <div className="field" style={{ flex: '0 1 90px' }}>
-                <label htmlFor="m-odds-home">Cote 1</label>
-                <input id="m-odds-home" type="number" step="0.1" min="1" value={oddsHome} onChange={(e) => setOddsHome(e.target.value)} />
-              </div>
-              {allowsDraw && (
-                <div className="field" style={{ flex: '0 1 90px' }}>
-                  <label htmlFor="m-odds-draw">Cote N</label>
-                  <input id="m-odds-draw" type="number" step="0.1" min="1" value={oddsDraw} onChange={(e) => setOddsDraw(e.target.value)} />
-                </div>
-              )}
-              <div className="field" style={{ flex: '0 1 90px' }}>
-                <label htmlFor="m-odds-away">Cote 2</label>
-                <input id="m-odds-away" type="number" step="0.1" min="1" value={oddsAway} onChange={(e) => setOddsAway(e.target.value)} />
-              </div>
-            </>
-          )}
         </div>
+        {oddsWeighted && (
+          <div className="form-row" style={{ flexWrap: 'nowrap' }}>
+            <div className="field" style={{ flex: '1 1 0' }}>
+              <label htmlFor="m-odds-home">Cote 1</label>
+              <input id="m-odds-home" type="number" step="0.1" min="1" value={oddsHome} onChange={(e) => setOddsHome(e.target.value)} />
+            </div>
+            {allowsDraw && (
+              <div className="field" style={{ flex: '1 1 0' }}>
+                <label htmlFor="m-odds-draw">Cote N</label>
+                <input id="m-odds-draw" type="number" step="0.1" min="1" value={oddsDraw} onChange={(e) => setOddsDraw(e.target.value)} />
+              </div>
+            )}
+            <div className="field" style={{ flex: '1 1 0' }}>
+              <label htmlFor="m-odds-away">Cote 2</label>
+              <input id="m-odds-away" type="number" step="0.1" min="1" value={oddsAway} onChange={(e) => setOddsAway(e.target.value)} />
+            </div>
+          </div>
+        )}
         {!oddsWeighted && (
           <p style={{ margin: 0, fontSize: 12, color: 'var(--text-tertiary)' }}>
             La règle de points de ce concours ne pondère pas par les cotes : aucune cote à saisir.
