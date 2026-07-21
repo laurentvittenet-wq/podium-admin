@@ -72,6 +72,7 @@ export type Database = {
       };
       matches: {
         Row: {
+          allows_draw: boolean;
           away_team: Json;
           competition: string;
           contest_id: string | null;
@@ -81,12 +82,15 @@ export type Database = {
           id: string;
           kickoff_at: string;
           odds: Json | null;
+          requires_score: boolean;
+          result: Database['public']['Enums']['pick_type'] | null;
           score: Json | null;
           settled_at: string | null;
           sport: Database['public']['Enums']['sport_type'];
           status: Database['public']['Enums']['match_status'];
         };
         Insert: {
+          allows_draw?: boolean;
           away_team: Json;
           competition: string;
           contest_id?: string | null;
@@ -96,12 +100,15 @@ export type Database = {
           id?: string;
           kickoff_at: string;
           odds?: Json | null;
+          requires_score?: boolean;
+          result?: Database['public']['Enums']['pick_type'] | null;
           score?: Json | null;
           settled_at?: string | null;
           sport: Database['public']['Enums']['sport_type'];
           status?: Database['public']['Enums']['match_status'];
         };
         Update: {
+          allows_draw?: boolean;
           away_team?: Json;
           competition?: string;
           contest_id?: string | null;
@@ -111,6 +118,8 @@ export type Database = {
           id?: string;
           kickoff_at?: string;
           odds?: Json | null;
+          requires_score?: boolean;
+          result?: Database['public']['Enums']['pick_type'] | null;
           score?: Json | null;
           settled_at?: string | null;
           sport?: Database['public']['Enums']['sport_type'];
@@ -283,7 +292,12 @@ export type Database = {
         Returns: Database['public']['Tables']['leagues']['Row'];
       };
       settle_match: {
-        Args: { p_away_score: number; p_home_score: number; p_match_id: string };
+        Args: {
+          p_away_score?: number;
+          p_home_score?: number;
+          p_match_id: string;
+          p_result?: Database['public']['Enums']['pick_type'];
+        };
         Returns: undefined;
       };
       get_players_admin: {
