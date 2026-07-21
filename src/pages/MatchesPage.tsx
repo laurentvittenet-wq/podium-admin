@@ -6,27 +6,49 @@ import type { Database } from '../lib/database.types';
 type Match = Database['public']['Tables']['matches']['Row'];
 type Contest = Database['public']['Tables']['contests']['Row'];
 type Sport = Database['public']['Enums']['sport_type'];
+type PickType = Database['public']['Enums']['pick_type'];
 type Team = { name: string; abbr?: string; color?: string; textColor?: string };
 
 const SPORTS: Sport[] = ['football', 'rugby', 'tennis', 'olympics'];
 
-function SettleForm({ match, editingSettled, onDone, onCancel }: {
-  match: Match; editingSettled: boolean; onDone: () => void; onCancel?: () => void;
+// Valeurs par défaut proposées selon le sport ; l'animateur peut toujours les
+// ajuster à la création d'un match (cases à cocher), donc ce ne sont que des
+// pré-réglages, pas une règle figée par sport.
+const SPORT_DEFAULTS: Record<Sport, { allowsDraw: boolean; requiresScore: boolean }> = {
+  football: { allowsDraw: true, requiresScore: true },
+  rugby: { allowsDraw: true, requiresScore: false },
+  tennis: { allowsDraw: false, requiresScore: false },
+  olympics: { allowsDraw: false, requiresScore: false },
+};
+
+function resultLabel(pick: PickType, home: Team, away: Team) {
+  if (pick === 'draw') return 'Match nul';
+  return pick === 'home' ? home.name : away.name;
+}
+
+function SettleForm({ match, home, away, editingSettled, onDone, onCancel }: {
+  match: Match; home: Team; away: Team; editingSettled: boolean; onDone: () => void; onCancel?: () => void;
 }) {
   const score = match.score as unknown as { home: number; away: number } | null;
-  const [home, setHome] = useState(score ? String(score.home) : '0');
-  const [away, setAway] = useState(score ? String(score.away) : '0');
+  const [homeScore, setHomeScore] = useState(score ? String(score.home) : '0');
+  const [awayScore, setAwayScore] = useState(score ? String(score.away) : '0');
+  const [result, setResult] = useState<PickType | null>(match.result);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSettle() {
     setBusy(true);
     setError(null);
-    const { error } = await supabase.rpc('settle_match', {
-      p_match_id: match.id,
-      p_home_score: Number(home),
-      p_away_score: Number(away),
-    });
+    const { error } = match.requires_score
+      ? await supabase.rpc('settle_match', {
+          p_match_id: match.id,
+          p_home_score: Number(homeScore),
+          p_away_score: Number(awayScore),
+        })
+      : await supabase.rpc('settle_match', {
+          p_match_id: match.id,
+          p_result: result ?? undefined,
+        });
     setBusy(false);
     if (error) { setError(error.message); return; }
     onDone();
@@ -35,15 +57,41 @@ function SettleForm({ match, editingSettled, onDone, onCancel }: {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-        <input type="number" min={0} value={home} onChange={(e) => setHome(e.target.value)}
-          style={{ width: 44, height: 30, textAlign: 'center', background: 'var(--bg-surface-3)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text-strong)' }} />
-        <span style={{ color: 'var(--text-tertiary)' }}>:</span>
-        <input type="number" min={0} value={away} onChange={(e) => setAway(e.target.value)}
-          style={{ width: 44, height: 30, textAlign: 'center', background: 'var(--bg-surface-3)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text-strong)' }} />
+        {match.requires_score ? (
+          <>
+            <input type="number" min={0} value={homeScore} onChange={(e) => setHomeScore(e.target.value)}
+              style={{ width: 44, height: 30, textAlign: 'center', background: 'var(--bg-surface-3)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text-strong)' }} />
+            <span style={{ color: 'var(--text-tertiary)' }}>:</span>
+            <input type="number" min={0} value={awayScore} onChange={(e) => setAwayScore(e.target.value)}
+              style={{ width: 44, height: 30, textAlign: 'center', background: 'var(--bg-surface-3)', border: '1px solid var(--border-strong)', borderRadius: 8, color: 'var(--text-strong)' }} />
+          </>
+        ) : (
+          <>
+            {([
+              ['home', home.abbr || home.name] as const,
+              ...(match.allows_draw ? [['draw', 'Nul'] as const] : []),
+              ['away', away.abbr || away.name] as const,
+            ]).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setResult(value)}
+                style={{
+                  height: 30, padding: '0 10px', fontSize: 12, fontWeight: 700, borderRadius: 8, cursor: 'pointer',
+                  border: `1.5px solid ${result === value ? 'transparent' : 'var(--border-strong)'}`,
+                  background: result === value ? 'var(--accent-soft)' : 'var(--bg-surface-3)',
+                  color: result === value ? 'var(--accent)' : 'var(--text-secondary)',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </>
+        )}
         <button
           type="button"
           className="btn icon-only sm"
-          disabled={busy}
+          disabled={busy || (!match.requires_score && !result)}
           onClick={handleSettle}
           title={editingSettled ? 'Enregistrer' : 'Régler'}
           aria-label={editingSettled ? 'Enregistrer' : 'Régler'}
@@ -73,14 +121,16 @@ function SettleForm({ match, editingSettled, onDone, onCancel }: {
   );
 }
 
-function ScoreCell({ match, onDone }: { match: Match; onDone: () => void }) {
+function ScoreCell({ match, home, away, onDone }: { match: Match; home: Team; away: Team; onDone: () => void }) {
   const [editing, setEditing] = useState(false);
   const score = match.score as unknown as { home: number; away: number } | null;
 
   if (match.status === 'settled' && !editing) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-strong)' }}>{score?.home}:{score?.away}</span>
+        <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-strong)' }}>
+          {match.requires_score ? `${score?.home}:${score?.away}` : match.result ? resultLabel(match.result, home, away) : '—'}
+        </span>
         <button
           type="button"
           className="btn secondary icon-only sm"
@@ -97,6 +147,8 @@ function ScoreCell({ match, onDone }: { match: Match; onDone: () => void }) {
   return (
     <SettleForm
       match={match}
+      home={home}
+      away={away}
       editingSettled={match.status === 'settled'}
       onDone={() => { setEditing(false); onDone(); }}
       onCancel={match.status === 'settled' ? () => setEditing(false) : undefined}
@@ -112,6 +164,8 @@ export function MatchesPage() {
 
   const [contestId, setContestId] = useState('');
   const [sport, setSport] = useState<Sport>('football');
+  const [allowsDraw, setAllowsDraw] = useState(SPORT_DEFAULTS.football.allowsDraw);
+  const [requiresScore, setRequiresScore] = useState(SPORT_DEFAULTS.football.requiresScore);
   const [competition, setCompetition] = useState('');
   const [homeName, setHomeName] = useState('');
   const [homeAbbr, setHomeAbbr] = useState('');
@@ -124,6 +178,12 @@ export function MatchesPage() {
   const [oddsDraw, setOddsDraw] = useState('3.4');
   const [oddsAway, setOddsAway] = useState('4.2');
   const [saving, setSaving] = useState(false);
+
+  function handleSportChange(s: Sport) {
+    setSport(s);
+    setAllowsDraw(SPORT_DEFAULTS[s].allowsDraw);
+    setRequiresScore(SPORT_DEFAULTS[s].requiresScore);
+  }
 
   async function load() {
     setLoading(true);
@@ -145,9 +205,9 @@ export function MatchesPage() {
     setError(null);
     const home: Team = { name: homeName, abbr: homeAbbr || undefined, color: homeColor };
     const away: Team = { name: awayName, abbr: awayAbbr || undefined, color: awayColor };
-    const odds = sport === 'tennis'
-      ? { home: Number(oddsHome), away: Number(oddsAway) }
-      : { home: Number(oddsHome), draw: Number(oddsDraw), away: Number(oddsAway) };
+    const odds = allowsDraw
+      ? { home: Number(oddsHome), draw: Number(oddsDraw), away: Number(oddsAway) }
+      : { home: Number(oddsHome), away: Number(oddsAway) };
     const { error } = await supabase.from('matches').insert({
       contest_id: contestId || null,
       sport,
@@ -156,6 +216,8 @@ export function MatchesPage() {
       away_team: away,
       kickoff_at: kickoffAt ? new Date(kickoffAt).toISOString() : new Date().toISOString(),
       odds,
+      allows_draw: allowsDraw,
+      requires_score: requiresScore,
     });
     setSaving(false);
     if (error) { setError(error.message); return; }
@@ -168,7 +230,7 @@ export function MatchesPage() {
       <div>
         <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text-strong)' }}>Matchs</h1>
         <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>
-          Règle un match une fois le score connu : les points de tous les pronos sont recalculés côté serveur.
+          Règle un match une fois le résultat connu : les points de tous les pronos sont recalculés côté serveur.
         </p>
       </div>
 
@@ -184,7 +246,7 @@ export function MatchesPage() {
           </div>
           <div className="field" style={{ flex: '1 1 120px' }}>
             <label htmlFor="m-sport">Sport</label>
-            <select id="m-sport" value={sport} onChange={(e) => setSport(e.target.value as Sport)}>
+            <select id="m-sport" value={sport} onChange={(e) => handleSportChange(e.target.value as Sport)}>
               {SPORTS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
@@ -192,6 +254,17 @@ export function MatchesPage() {
             <label htmlFor="m-competition">Compétition</label>
             <input id="m-competition" value={competition} onChange={(e) => setCompetition(e.target.value)} placeholder="Ligue 1" required />
           </div>
+        </div>
+
+        <div className="form-row" style={{ alignItems: 'center' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-secondary)' }}>
+            <input type="checkbox" checked={allowsDraw} onChange={(e) => setAllowsDraw(e.target.checked)} />
+            Match nul possible
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-secondary)' }}>
+            <input type="checkbox" checked={requiresScore} onChange={(e) => setRequiresScore(e.target.checked)} />
+            Score à saisir au règlement
+          </label>
         </div>
 
         <div className="form-row">
@@ -232,7 +305,7 @@ export function MatchesPage() {
             <label htmlFor="m-odds-home">Cote 1</label>
             <input id="m-odds-home" type="number" step="0.1" min="1" value={oddsHome} onChange={(e) => setOddsHome(e.target.value)} />
           </div>
-          {sport !== 'tennis' && (
+          {allowsDraw && (
             <div className="field" style={{ flex: '0 1 90px' }}>
               <label htmlFor="m-odds-draw">Cote N</label>
               <input id="m-odds-draw" type="number" step="0.1" min="1" value={oddsDraw} onChange={(e) => setOddsDraw(e.target.value)} />
@@ -271,7 +344,7 @@ export function MatchesPage() {
                 <th style={{ padding: '6px 8px' }}>Match</th>
                 <th style={{ padding: '6px 8px' }}>Coup d'envoi</th>
                 <th style={{ padding: '6px 8px' }}>Statut</th>
-                <th style={{ padding: '6px 8px' }}>Score / Régler</th>
+                <th style={{ padding: '6px 8px' }}>Résultat / Régler</th>
               </tr>
             </thead>
             <tbody>
@@ -280,7 +353,13 @@ export function MatchesPage() {
                 const away = m.away_team as unknown as Team;
                 return (
                   <tr key={m.id} style={{ borderTop: '1px solid var(--border)' }}>
-                    <td style={{ padding: '10px 8px', color: 'var(--text-strong)', fontWeight: 700, whiteSpace: 'nowrap' }}>{home.name} — {away.name}</td>
+                    <td style={{ padding: '10px 8px', whiteSpace: 'nowrap' }}>
+                      <div style={{ color: 'var(--text-strong)', fontWeight: 700 }}>{home.name} — {away.name}</div>
+                      <div style={{ marginTop: 3, display: 'flex', gap: 4 }}>
+                        {!m.allows_draw && <span className="badge" style={{ background: 'var(--bg-surface-3)', color: 'var(--text-tertiary)' }}>Sans nul</span>}
+                        {!m.requires_score && <span className="badge" style={{ background: 'var(--bg-surface-3)', color: 'var(--text-tertiary)' }}>Sans score</span>}
+                      </div>
+                    </td>
                     <td style={{ padding: '10px 8px', fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{new Date(m.kickoff_at).toLocaleString('fr-FR')}</td>
                     <td style={{ padding: '10px 8px' }}>
                       <span className="badge" style={{
@@ -289,7 +368,7 @@ export function MatchesPage() {
                       }}>{m.status}</span>
                     </td>
                     <td style={{ padding: '10px 8px' }}>
-                      <ScoreCell match={m} onDone={load} />
+                      <ScoreCell match={m} home={home} away={away} onDone={load} />
                     </td>
                   </tr>
                 );
