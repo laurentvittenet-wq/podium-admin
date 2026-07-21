@@ -69,12 +69,12 @@ export function ScoringRulesPage() {
           <label htmlFor="rule-name">Nom</label>
           <input id="rule-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Barème standard" required />
         </div>
-        <div style={{ display: 'flex', gap: 16 }}>
-          <div className="field" style={{ flex: 1 }}>
+        <div className="form-row">
+          <div className="field" style={{ flex: '1 1 180px' }}>
             <label htmlFor="base">Points bon résultat (1/N/2)</label>
             <input id="base" type="number" min={0} value={basePoints} onChange={(e) => setBasePoints(Number(e.target.value))} />
           </div>
-          <div className="field" style={{ flex: 1 }}>
+          <div className="field" style={{ flex: '1 1 180px' }}>
             <label htmlFor="bonus">Bonus score exact</label>
             <input id="bonus" type="number" min={0} value={exactBonus} onChange={(e) => setExactBonus(Number(e.target.value))} />
           </div>
@@ -88,9 +88,9 @@ export function ScoringRulesPage() {
           <div style={{ font: '600 13px var(--font-ui)', color: 'var(--text-secondary)', marginBottom: 8 }}>
             Multiplicateur de confiance — malus si le prono est faux
           </div>
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div className="form-row" style={{ gap: 12 }}>
             {levels.map((lvl, i) => (
-              <div key={lvl.multiplier} className="field" style={{ flex: 1 }}>
+              <div key={lvl.multiplier} className="field" style={{ flex: '1 1 100px' }}>
                 <label>×{lvl.multiplier} malus</label>
                 <input
                   type="number" min={0} value={lvl.malus}
@@ -117,6 +117,7 @@ export function ScoringRulesPage() {
         ) : rules.length === 0 ? (
           <div style={{ color: 'var(--text-tertiary)' }}>Aucune règle pour l'instant.</div>
         ) : (
+          <div className="table-scroll">
           <table>
             <thead>
               <tr style={{ textAlign: 'left', color: 'var(--text-tertiary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -134,13 +135,14 @@ export function ScoringRulesPage() {
                   <td style={{ padding: '10px 8px', fontFamily: 'var(--font-mono)' }}>{r.base_points}</td>
                   <td style={{ padding: '10px 8px', fontFamily: 'var(--font-mono)' }}>+{r.exact_score_bonus}</td>
                   <td style={{ padding: '10px 8px' }}>{r.odds_weighted ? 'Oui' : 'Non'}</td>
-                  <td style={{ padding: '10px 8px', fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <td style={{ padding: '10px 8px', fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                     {(r.confidence_levels as unknown as ConfidenceLevel[]).map((l) => `×${l.multiplier}(-${l.malus})`).join(' · ')}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

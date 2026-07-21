@@ -54,8 +54,8 @@ export function PlayersPage() {
         </div>
       )}
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+      <div className="card table-scroll" style={{ padding: 0 }}>
+        <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               <th style={thStyle}>Pseudo</th>
@@ -80,8 +80,8 @@ export function PlayersPage() {
                     <span style={{ color: 'var(--text-tertiary)', marginLeft: 6 }}>({p.display_name})</span>
                   )}
                 </td>
-                <td style={{ ...tdStyle, color: 'var(--text-secondary)' }}>{p.email ?? '—'}</td>
-                <td style={tdStyle}>
+                <td style={{ ...tdStyle, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{p.email ?? '—'}</td>
+                <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                   <span style={{
                     fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999,
                     background: p.role === 'admin' ? 'var(--danger-soft)' : p.role === 'animateur' ? 'var(--accent-soft)' : 'var(--bg-surface-3)',
@@ -90,10 +90,10 @@ export function PlayersPage() {
                     {p.role}
                   </span>
                 </td>
-                <td style={{ ...tdStyle, color: 'var(--text-secondary)' }}>
+                <td style={{ ...tdStyle, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                   {new Date(p.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                 </td>
-                <td style={{ ...tdStyle, textAlign: 'right' }}>
+                <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
                   <button
                     className="btn secondary"
                     onClick={() => setConfirmTarget(p)}
