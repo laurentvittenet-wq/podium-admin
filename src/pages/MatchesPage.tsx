@@ -2,26 +2,15 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Check, ChevronLeft, ChevronRight, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { Database } from '../lib/database.types';
+import { fetchSports, type SportRow } from '../lib/sports';
 
 type Match = Database['public']['Tables']['matches']['Row'];
 type Contest = Database['public']['Tables']['contests']['Row'];
 type ScoringRule = Database['public']['Tables']['scoring_rules']['Row'];
-type Sport = Database['public']['Enums']['sport_type'];
 type PickType = Database['public']['Enums']['pick_type'];
 type Team = { name: string; abbr?: string; color?: string; textColor?: string };
 
-const SPORTS: Sport[] = ['football', 'rugby', 'tennis', 'olympics'];
 const MATCHES_PAGE_SIZE = 50;
-
-// Valeurs par défaut proposées selon le sport ; l'animateur peut toujours les
-// ajuster à la création d'un match (cases à cocher), donc ce ne sont que des
-// pré-réglages, pas une règle figée par sport.
-const SPORT_DEFAULTS: Record<Sport, { allowsDraw: boolean; requiresScore: boolean }> = {
-  football: { allowsDraw: true, requiresScore: true },
-  rugby: { allowsDraw: true, requiresScore: false },
-  tennis: { allowsDraw: false, requiresScore: false },
-  olympics: { allowsDraw: false, requiresScore: false },
-};
 
 function resultLabel(pick: PickType, home: Team, away: Team) {
   if (pick === 'draw') return 'Match nul';
@@ -134,15 +123,15 @@ function formatKickoff(iso: string) {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${yy} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function EditMatchModal({ match, contests, rules, onDone, onCancel }: {
-  match: Match; contests: Contest[]; rules: ScoringRule[]; onDone: () => void; onCancel: () => void;
+function EditMatchModal({ match, contests, rules, sports, onDone, onCancel }: {
+  match: Match; contests: Contest[]; rules: ScoringRule[]; sports: SportRow[]; onDone: () => void; onCancel: () => void;
 }) {
   const home = match.home_team as unknown as Team;
   const away = match.away_team as unknown as Team;
   const odds = match.odds as unknown as { home: number; draw?: number; away: number } | null;
 
   const [contestId, setContestId] = useState(match.contest_id || '');
-  const [sport, setSport] = useState<Sport>(match.sport);
+  const [sport, setSport] = useState(match.sport);
   const [allowsDraw, setAllowsDraw] = useState(match.allows_draw);
   const [requiresScore, setRequiresScore] = useState(match.requires_score);
   const [competition, setCompetition] = useState(match.competition);
@@ -167,10 +156,13 @@ function EditMatchModal({ match, contests, rules, onDone, onCancel }: {
   const selectedRule = rules.find((r) => r.id === selectedContest?.scoring_rule_id);
   const oddsWeighted = selectedContest ? (selectedRule ? selectedRule.odds_weighted : true) : true;
 
-  function handleSportChange(s: Sport) {
+  function handleSportChange(s: string) {
     setSport(s);
-    setAllowsDraw(SPORT_DEFAULTS[s].allowsDraw);
-    setRequiresScore(SPORT_DEFAULTS[s].requiresScore);
+    const def = sports.find((sp) => sp.slug === s);
+    if (def) {
+      setAllowsDraw(def.allows_draw_default);
+      setRequiresScore(def.requires_score_default);
+    }
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -218,8 +210,8 @@ function EditMatchModal({ match, contests, rules, onDone, onCancel }: {
           </div>
           <div className="field" style={{ flex: '1 1 120px' }}>
             <label htmlFor="em-sport">Sport</label>
-            <select id="em-sport" value={sport} onChange={(e) => handleSportChange(e.target.value as Sport)}>
-              {SPORTS.map((s) => <option key={s} value={s}>{s}</option>)}
+            <select id="em-sport" value={sport} onChange={(e) => handleSportChange(e.target.value)}>
+              {sports.map((s) => <option key={s.slug} value={s.slug}>{s.name}</option>)}
             </select>
           </div>
           <div className="field" style={{ flex: '2 1 160px' }}>
@@ -353,11 +345,12 @@ export function MatchesPage() {
   const [editMatch, setEditMatch] = useState<Match | null>(null);
   const [matchesPage, setMatchesPage] = useState(0);
   const [matchesTotal, setMatchesTotal] = useState(0);
+  const [sports, setSports] = useState<SportRow[]>([]);
 
   const [contestId, setContestId] = useState('');
-  const [sport, setSport] = useState<Sport>('football');
-  const [allowsDraw, setAllowsDraw] = useState(SPORT_DEFAULTS.football.allowsDraw);
-  const [requiresScore, setRequiresScore] = useState(SPORT_DEFAULTS.football.requiresScore);
+  const [sport, setSport] = useState('');
+  const [allowsDraw, setAllowsDraw] = useState(true);
+  const [requiresScore, setRequiresScore] = useState(true);
   const [competition, setCompetition] = useState('');
   const [homeName, setHomeName] = useState('');
   const [homeAbbr, setHomeAbbr] = useState('');
@@ -371,26 +364,36 @@ export function MatchesPage() {
   const [oddsAway, setOddsAway] = useState('4.2');
   const [saving, setSaving] = useState(false);
 
-  function handleSportChange(s: Sport) {
+  function handleSportChange(s: string) {
     setSport(s);
-    setAllowsDraw(SPORT_DEFAULTS[s].allowsDraw);
-    setRequiresScore(SPORT_DEFAULTS[s].requiresScore);
+    const def = sports.find((sp) => sp.slug === s);
+    if (def) {
+      setAllowsDraw(def.allows_draw_default);
+      setRequiresScore(def.requires_score_default);
+    }
   }
 
   async function load() {
     setLoading(true);
     const from = matchesPage * MATCHES_PAGE_SIZE;
     const to = from + MATCHES_PAGE_SIZE - 1;
-    const [{ data: m, error: e1, count }, { data: c, error: e2 }, { data: r, error: e3 }] = await Promise.all([
+    const [{ data: m, error: e1, count }, { data: c, error: e2 }, { data: r, error: e3 }, activeSports] = await Promise.all([
       supabase.from('matches').select('*', { count: 'exact' }).order('kickoff_at', { ascending: false }).range(from, to),
       supabase.from('contests').select('*').order('created_at', { ascending: false }),
       supabase.from('scoring_rules').select('*'),
+      fetchSports(true),
     ]);
     if (e1 || e2 || e3) setError((e1 || e2 || e3)!.message);
     setMatches(m || []);
     setMatchesTotal(count ?? 0);
     setContests(c || []);
     setRules(r || []);
+    setSports(activeSports);
+    if (activeSports.length && !activeSports.some((s) => s.slug === sport)) {
+      setSport(activeSports[0].slug);
+      setAllowsDraw(activeSports[0].allows_draw_default);
+      setRequiresScore(activeSports[0].requires_score_default);
+    }
     setLoading(false);
   }
 
@@ -462,8 +465,8 @@ export function MatchesPage() {
           </div>
           <div className="field" style={{ flex: '1 1 120px' }}>
             <label htmlFor="m-sport">Sport</label>
-            <select id="m-sport" value={sport} onChange={(e) => handleSportChange(e.target.value as Sport)}>
-              {SPORTS.map((s) => <option key={s} value={s}>{s}</option>)}
+            <select id="m-sport" value={sport} onChange={(e) => handleSportChange(e.target.value)}>
+              {sports.map((s) => <option key={s.slug} value={s.slug}>{s.name}</option>)}
             </select>
           </div>
           <div className="field" style={{ flex: '2 1 160px' }}>
@@ -651,6 +654,7 @@ export function MatchesPage() {
           match={editMatch}
           contests={contests}
           rules={rules}
+          sports={sports}
           onDone={() => { setEditMatch(null); load(); }}
           onCancel={() => setEditMatch(null)}
         />

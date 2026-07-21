@@ -16,7 +16,7 @@ export type Database = {
           id: string;
           name: string;
           scoring_rule_id: string | null;
-          sport: Database['public']['Enums']['sport_type'] | null;
+          sport: string | null;
           starts_at: string | null;
         };
         Insert: {
@@ -28,7 +28,7 @@ export type Database = {
           id?: string;
           name: string;
           scoring_rule_id?: string | null;
-          sport?: Database['public']['Enums']['sport_type'] | null;
+          sport?: string | null;
           starts_at?: string | null;
         };
         Update: {
@@ -40,7 +40,7 @@ export type Database = {
           id?: string;
           name?: string;
           scoring_rule_id?: string | null;
-          sport?: Database['public']['Enums']['sport_type'] | null;
+          sport?: string | null;
           starts_at?: string | null;
         };
         Relationships: [
@@ -89,7 +89,7 @@ export type Database = {
           result: Database['public']['Enums']['pick_type'] | null;
           score: Json | null;
           settled_at: string | null;
-          sport: Database['public']['Enums']['sport_type'];
+          sport: string;
           status: Database['public']['Enums']['match_status'];
         };
         Insert: {
@@ -107,7 +107,7 @@ export type Database = {
           result?: Database['public']['Enums']['pick_type'] | null;
           score?: Json | null;
           settled_at?: string | null;
-          sport: Database['public']['Enums']['sport_type'];
+          sport: string;
           status?: Database['public']['Enums']['match_status'];
         };
         Update: {
@@ -125,7 +125,7 @@ export type Database = {
           result?: Database['public']['Enums']['pick_type'] | null;
           score?: Json | null;
           settled_at?: string | null;
-          sport?: Database['public']['Enums']['sport_type'];
+          sport?: string;
           status?: Database['public']['Enums']['match_status'];
         };
         Relationships: [
@@ -227,6 +227,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      sports: {
+        Row: {
+          active: boolean;
+          allows_draw_default: boolean;
+          color: string;
+          created_at: string;
+          id: string;
+          name: string;
+          requires_score_default: boolean;
+          slug: string;
+          sort_order: number;
+        };
+        Insert: {
+          active?: boolean;
+          allows_draw_default?: boolean;
+          color?: string;
+          created_at?: string;
+          id?: string;
+          name: string;
+          requires_score_default?: boolean;
+          slug: string;
+          sort_order?: number;
+        };
+        Update: {
+          active?: boolean;
+          allows_draw_default?: boolean;
+          color?: string;
+          created_at?: string;
+          id?: string;
+          name?: string;
+          requires_score_default?: boolean;
+          slug?: string;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
       scoring_rules: {
         Row: {
           base_points: number;
@@ -269,7 +305,7 @@ export type Database = {
           logo_url: string | null;
           name: string;
           source: string;
-          sport: Database['public']['Enums']['sport_type'];
+          sport: string;
           updated_at: string;
         };
         Insert: {
@@ -280,7 +316,7 @@ export type Database = {
           logo_url?: string | null;
           name: string;
           source?: string;
-          sport: Database['public']['Enums']['sport_type'];
+          sport: string;
           updated_at?: string;
         };
         Update: {
@@ -291,7 +327,7 @@ export type Database = {
           logo_url?: string | null;
           name?: string;
           source?: string;
-          sport?: Database['public']['Enums']['sport_type'];
+          sport?: string;
           updated_at?: string;
         };
         Relationships: [];
@@ -367,7 +403,6 @@ export type Database = {
     Enums: {
       match_status: 'open' | 'locked' | 'live' | 'settled';
       pick_type: 'home' | 'draw' | 'away';
-      sport_type: 'football' | 'rugby' | 'tennis' | 'olympics';
       user_role: 'player' | 'animateur' | 'admin';
     };
   };

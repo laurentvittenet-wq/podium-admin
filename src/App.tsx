@@ -7,10 +7,12 @@ import { ScoringRulesPage } from './pages/ScoringRulesPage';
 import { MatchesPage } from './pages/MatchesPage';
 import { PlayersPage } from './pages/PlayersPage';
 import { LogosPage } from './pages/LogosPage';
+import { SportsPage } from './pages/SportsPage';
 
 const NAV = [
   { value: 'contests', label: 'Concours' },
   { value: 'matches', label: 'Matchs' },
+  { value: 'sports', label: 'Sports' },
   { value: 'players', label: 'Joueurs' },
   { value: 'rules', label: 'Règles de points' },
   { value: 'logos', label: 'Logos équipes' },
@@ -97,6 +99,7 @@ export function App() {
       <main className="app-main">
         {page === 'contests' && <ContestsPage />}
         {page === 'matches' && <MatchesPage />}
+        {page === 'sports' && <SportsPage />}
         {page === 'players' && <PlayersPage currentUserRole={profile.role} />}
         {page === 'rules' && <ScoringRulesPage />}
         {page === 'logos' && <LogosPage />}
