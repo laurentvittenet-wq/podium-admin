@@ -340,7 +340,7 @@ export type Database = {
         Returns: undefined;
       };
       get_players_admin: {
-        Args: Record<PropertyKey, never>;
+        Args: { p_limit?: number; p_offset?: number };
         Returns: {
           id: string;
           email: string | null;
@@ -348,6 +348,7 @@ export type Database = {
           display_name: string | null;
           role: Database['public']['Enums']['user_role'];
           created_at: string;
+          total_count: number;
         }[];
       };
       delete_player_admin: {

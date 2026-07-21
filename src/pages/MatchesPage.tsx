@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Check, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import type { Database } from '../lib/database.types';
 
@@ -11,6 +11,7 @@ type PickType = Database['public']['Enums']['pick_type'];
 type Team = { name: string; abbr?: string; color?: string; textColor?: string };
 
 const SPORTS: Sport[] = ['football', 'rugby', 'tennis', 'olympics'];
+const MATCHES_PAGE_SIZE = 50;
 
 // Valeurs par défaut proposées selon le sport ; l'animateur peut toujours les
 // ajuster à la création d'un match (cases à cocher), donc ce ne sont que des
@@ -350,6 +351,8 @@ export function MatchesPage() {
   const [confirmDelete, setConfirmDelete] = useState<Match | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [editMatch, setEditMatch] = useState<Match | null>(null);
+  const [matchesPage, setMatchesPage] = useState(0);
+  const [matchesTotal, setMatchesTotal] = useState(0);
 
   const [contestId, setContestId] = useState('');
   const [sport, setSport] = useState<Sport>('football');
@@ -376,19 +379,22 @@ export function MatchesPage() {
 
   async function load() {
     setLoading(true);
-    const [{ data: m, error: e1 }, { data: c, error: e2 }, { data: r, error: e3 }] = await Promise.all([
-      supabase.from('matches').select('*').order('kickoff_at', { ascending: false }),
+    const from = matchesPage * MATCHES_PAGE_SIZE;
+    const to = from + MATCHES_PAGE_SIZE - 1;
+    const [{ data: m, error: e1, count }, { data: c, error: e2 }, { data: r, error: e3 }] = await Promise.all([
+      supabase.from('matches').select('*', { count: 'exact' }).order('kickoff_at', { ascending: false }).range(from, to),
       supabase.from('contests').select('*').order('created_at', { ascending: false }),
       supabase.from('scoring_rules').select('*'),
     ]);
     if (e1 || e2 || e3) setError((e1 || e2 || e3)!.message);
     setMatches(m || []);
+    setMatchesTotal(count ?? 0);
     setContests(c || []);
     setRules(r || []);
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [matchesPage]);
 
   // La règle "Défaut" (aucun concours choisi, ou concours sans règle assignée)
   // pondère par les cotes -- même comportement que settle_match côté serveur.
@@ -421,7 +427,7 @@ export function MatchesPage() {
     setSaving(false);
     if (error) { setError(error.message); return; }
     setCompetition(''); setHomeName(''); setHomeAbbr(''); setAwayName(''); setAwayAbbr(''); setKickoffAt('');
-    load();
+    if (matchesPage === 0) load(); else setMatchesPage(0);
   }
 
   async function handleDelete() {
@@ -432,7 +438,7 @@ export function MatchesPage() {
     setDeleting(false);
     if (error) { setError(error.message); return; }
     setConfirmDelete(null);
-    load();
+    if (matches.length === 1 && matchesPage > 0) setMatchesPage((p) => p - 1); else load();
   }
 
   return (
@@ -609,6 +615,36 @@ export function MatchesPage() {
           </div>
         )}
       </div>
+
+      {!loading && matchesTotal > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+            {matchesPage * MATCHES_PAGE_SIZE + 1}–{Math.min(matchesPage * MATCHES_PAGE_SIZE + matches.length, matchesTotal)} sur {matchesTotal} matchs
+          </span>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              type="button"
+              className="btn secondary icon-only sm"
+              disabled={matchesPage === 0}
+              onClick={() => setMatchesPage((p) => Math.max(0, p - 1))}
+              title="Page précédente"
+              aria-label="Page précédente"
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <button
+              type="button"
+              className="btn secondary icon-only sm"
+              disabled={(matchesPage + 1) * MATCHES_PAGE_SIZE >= matchesTotal}
+              onClick={() => setMatchesPage((p) => p + 1)}
+              title="Page suivante"
+              aria-label="Page suivante"
+            >
+              <ChevronRight size={15} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {editMatch && (
         <EditMatchModal
